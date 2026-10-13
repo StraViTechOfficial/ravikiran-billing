@@ -1,0 +1,1709 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ravi Kiran Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=Carlito:wght@400;700&display=swap">
+<style>
+/* Layout: fixed dark sidebar (top bar on phones) + one working column; machine-yellow marks the primary action. */
+:root{
+  --bg:#EEF0F2; --surface:#FFFFFF; --sunk:#F6F7F8; --ink:#1B2229; --muted:#5D6873; --line:#D9DDE2;
+  --side:#1B2229; --side-ink:#C9D0D7; --side-active:#2A333D;
+  --accent:#F2B705; --accent-ink:#1B2229; --accent-soft:#FDF3CF;
+  --good:#1E7F48; --good-soft:#DFF3E7; --warn:#9A6200; --warn-soft:#FCEFD3; --bad:#B4380F; --bad-soft:#FBE3DA;
+  --info:#24598F; --info-soft:#E1ECF7;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  --doc:"Carlito",Calibri,"Segoe UI",Arial,sans-serif;
+  --r:8px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111519; --surface:#192026; --sunk:#151B20; --ink:#E5E9ED; --muted:#97A2AD; --line:#2B343D;
+  --side:#0B0E11; --side-ink:#AEB8C2; --side-active:#1F272F;
+  --accent:#F5C12E; --accent-ink:#14181C; --accent-soft:#3A3115;
+  --good:#5CC88A; --good-soft:#163323; --warn:#E9B04C; --warn-soft:#3A2C10; --bad:#F08A63; --bad-soft:#3D1D12;
+  --info:#7DB2E8; --info-soft:#15283B; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#111519; --surface:#192026; --sunk:#151B20; --ink:#E5E9ED; --muted:#97A2AD; --line:#2B343D;
+  --side:#0B0E11; --side-ink:#AEB8C2; --side-active:#1F272F;
+  --accent:#F5C12E; --accent-ink:#14181C; --accent-soft:#3A3115;
+  --good:#5CC88A; --good-soft:#163323; --warn:#E9B04C; --warn-soft:#3A2C10; --bad:#F08A63; --bad-soft:#3D1D12;
+  --info:#7DB2E8; --info-soft:#15283B; color-scheme:dark;}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.2;text-wrap:balance}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.1rem;font-weight:700}
+h3{font-size:.95rem;font-weight:700}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num,td.r,.tile b{font-variant-numeric:tabular-nums}
+
+/* shell */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100%}
+.side{background:var(--side);color:var(--side-ink);padding:20px 14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:10px;align-items:center;padding:0 6px}
+.brand-mark{width:36px;height:36px;border-radius:6px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:800 15px var(--display)}
+.brand b{display:block;color:#fff;font:700 15px/1.2 var(--display)}
+.brand small{font-size:12px;opacity:.75}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:6px;text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--side-active);color:#fff}
+.nav a.on{background:var(--side-active);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+.nav svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side-foot{margin-top:auto;font-size:12px;padding:0 6px;opacity:.8}
+.main{padding:28px 32px 60px;min-width:0;max-width:1280px;width:100%}
+
+/* page parts */
+.page-head{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+.page-head p{margin:4px 0 0;color:var(--muted)}
+.crumb{display:inline-block;margin-bottom:6px;color:var(--muted);text-decoration:none;font-size:14px}
+.crumb:hover{color:var(--ink)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{border-color:var(--bad)}
+.btn.small{min-height:34px;padding:4px 12px;font-size:14px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--sunk)}
+.btn.block{width:100%}
+.linkbtn{background:none;border:0;padding:0;color:var(--info);cursor:pointer;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.panel-head p{margin:0;color:var(--muted);font-size:13px}
+.stack{display:flex;flex-direction:column;gap:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px;align-items:start}
+.grid-side{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:1100px){.grid-side{grid-template-columns:minmax(0,1fr)}}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.tile span{font-size:14px;color:var(--muted);font-weight:600}
+.tile b{font:800 1.5rem/1.2 var(--display)}
+.tile small{color:var(--muted);font-size:14px}
+.tile b.warn{color:var(--warn)}
+.tile.hi{border-color:var(--accent);background:var(--accent-soft)}
+.tile.alert b{color:var(--bad)}
+a.tile{text-decoration:none;color:inherit}
+.seg a{display:inline-block;padding:7px 14px;border-radius:5px;font-weight:600;color:var(--muted);text-decoration:none}
+.seg a.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:22px}
+.quick .btn{min-height:54px;justify-content:flex-start;font-size:15px}
+.quick .btn i{font-style:normal;font:800 20px/1 var(--display);width:26px;height:26px;border-radius:5px;display:grid;place-items:center;background:var(--sunk)}
+.quick .btn.primary i{background:rgba(0,0,0,.12)}
+
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table.tbl{width:100%;border-collapse:collapse;font-size:15px}
+.tbl th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.r,.tbl th.r{text-align:right}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover td{background:var(--sunk)}
+.tbl .sub{display:block;color:var(--muted);font-size:14px}
+.tbl tfoot td{font-weight:700;border-top:2px solid var(--line)}
+
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--sunk);color:var(--muted)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.info{background:var(--info-soft);color:var(--info)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:3px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:5px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.search{flex:1;min-width:200px;max-width:340px}
+
+.empty{padding:34px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.field .hint{font-size:12px;color:var(--muted)}
+.input,select.input,textarea.input{width:100%;min-height:42px;padding:8px 11px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+textarea.input{min-height:76px;resize:vertical}
+.input:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.input[readonly]{background:var(--sunk)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px}
+.form-grid .full{grid-column:1/-1}
+.errors{background:var(--bad-soft);color:var(--bad);border-radius:6px;padding:10px 14px;font-weight:500}
+.errors ul{margin:4px 0 0;padding-left:18px}
+
+/* bill editor */
+.line-card{border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);padding:16px;display:flex;flex-direction:column;gap:14px}
+.line-card .line-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.line-card .line-top h3 span{color:var(--muted);font-weight:500}
+.entries{width:100%;border-collapse:collapse;font-size:14px}
+.entries th{font-size:12px;text-align:left;color:var(--muted);font-weight:600;padding:0 6px 6px}
+.entries td{padding:3px 6px}
+.entries .input{min-height:38px}
+.entries td.x{width:40px}
+.line-total{display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.line-total b{color:var(--ink);font-variant-numeric:tabular-nums}
+.totals{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.totals div{display:flex;justify-content:space-between;gap:12px}
+.totals .grand{border-top:2px solid var(--ink);padding-top:8px;margin-top:4px;font:800 1.25rem var(--display)}
+.totals .words{font-size:12px;color:var(--muted);display:block}
+.sticky{position:sticky;top:20px}
+@media (max-width:860px){.sticky{position:static}}
+
+/* bill view */
+.paper{background:#E3E5E8;border-radius:var(--r);padding:18px;overflow-x:auto}
+.summary-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px}
+.summary-row b{font-variant-numeric:tabular-nums}
+.summary-row.big b{font:800 1.3rem var(--display)}
+.pay-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.pay-item small{display:block;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(10,14,18,.55);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;overflow-y:auto}
+.modal-card{background:var(--surface);border-radius:10px;width:100%;max-width:620px;padding:22px 24px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal-card.narrow{max-width:440px}
+.modal-card h2{margin-bottom:16px;font-size:1.25rem}
+.who{display:flex;gap:12px;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;flex-wrap:wrap}
+.who-av{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:800 16px var(--display);flex:none}
+.who-main{flex:1 1 160px;min-width:0;display:flex;flex-direction:column;font-size:14px;color:var(--muted)}
+.who-main b{color:var(--ink);font-size:16px}
+.who-r{margin-left:auto;text-align:right;display:flex;flex-direction:column;font-size:13px;color:var(--muted)}
+.who-r b{font:800 1.25rem var(--display)}
+.field-label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.rseg{display:flex;flex-wrap:wrap;gap:8px}
+.rseg label{position:relative}
+.rseg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.rseg span{display:inline-flex;align-items:center;min-height:44px;padding:6px 18px;border:1px solid var(--line);border-radius:999px;font-weight:600;background:var(--surface)}
+.rseg input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.rseg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.billpick{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;background:var(--surface)}
+.billpick+.billpick{margin-top:8px}
+.billpick input{width:20px;height:20px;accent-color:var(--ink);flex:none;margin:0}
+.billpick:has(input:checked){border-color:var(--ink);box-shadow:inset 4px 0 0 var(--accent)}
+.bp-main{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px;color:var(--muted)}
+.bp-main b{color:var(--ink);font-size:15px}
+.bp-r{text-align:right;display:flex;flex-direction:column;font-size:13px;color:var(--muted)}
+.bp-r b{font:800 1.1rem var(--display)}
+.dchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.dchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;cursor:pointer;min-height:34px}
+.dchip:hover{border-color:var(--ink)}
+.input.big{font:800 1.4rem var(--display);min-height:54px}
+.input.active{border-color:var(--ink);background:var(--accent-soft)}
+.modal .eq{margin:16px 0 0;gap:8px}
+.modal .eq-item{flex-basis:110px;padding:10px 12px}
+.modal .eq-item b{font-size:1.15rem}
+.modal .eq .op{font-size:1.3rem}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+#toast div{background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:6px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:pop .2s ease-out}
+@keyframes pop{from{transform:translateY(8px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#toast div{animation:none}}
+
+
+/* sums: [box] − [box] = [box] */
+.sec{font-size:1rem;color:var(--muted);margin:0 0 10px}
+.eq{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin-bottom:20px}
+.eq-item{flex:1 1 170px;position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;display:flex;flex-direction:column;gap:2px;text-decoration:none;color:inherit;text-align:left;font:inherit}
+.eq-item span{font-size:14px;font-weight:600;color:var(--muted)}
+.eq-item b{font:800 1.65rem/1.2 var(--display);font-variant-numeric:tabular-nums}
+.eq-item small{font-size:14px;color:var(--muted)}
+.eq-item.good b,.t-good{color:var(--good)}
+.eq-item.bad b,.t-bad{color:var(--bad)}
+.eq-item.warn b,.t-warn{color:var(--warn)}
+.eq-item.on{border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--accent)}
+.eq-sep{width:1px;background:var(--line);margin:0 10px}
+.eq .op{align-self:center;font:800 1.7rem var(--display);color:var(--muted);min-width:18px;text-align:center}
+.go{cursor:pointer;transition:border-color .15s}
+.go:hover{border-color:var(--ink)}
+.go::after{content:"›";position:absolute;top:10px;right:14px;font:700 22px/1 var(--display);color:var(--muted)}
+.go:hover::after{color:var(--ink)}
+a.tile{position:relative}
+.fchip{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:6px 14px;border-radius:999px;border:1px solid var(--ink);background:var(--accent-soft);font-weight:600;cursor:pointer}
+.big-phone{font:700 1.3rem var(--display);margin:0 0 10px;user-select:all}
+
+/* bill editor: a sheet laid out like the paper bill */
+.sheet-panel{padding:0;overflow:hidden}
+.sheet-top{display:flex;flex-wrap:wrap;gap:12px 20px;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--sunk)}
+.co-pick{display:flex;align-items:center;gap:10px}
+.co-pick label{font-size:13px;font-weight:600;color:var(--muted)}
+.co-pick .input{min-width:220px}
+.party-ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.party-ed>div{padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.party-ed>div+div{border-left:1px solid var(--line)}
+@media (max-width:820px){.party-ed{grid-template-columns:1fr}.party-ed>div+div{border-left:0;border-top:1px solid var(--line)}}
+.pe-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted)}
+.client-card{background:var(--sunk);border:1px dashed var(--line);border-radius:6px;padding:10px 12px;font-size:13px;color:var(--muted);line-height:1.55}
+.client-card b{color:var(--ink)}
+.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:520px){.form-grid.two{grid-template-columns:1fr}}
+.sheet-wrap{overflow-x:auto;padding:16px 20px 10px}
+table.sheet{width:100%;border-collapse:collapse;font-size:14px;min-width:860px}
+.sheet th,.sheet td{border:1px solid var(--line)}
+.sheet th{background:var(--sunk);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:9px 8px;white-space:nowrap}
+.sheet th.r{text-align:right}.sheet th.c{text-align:center}
+.sheet td{padding:4px;vertical-align:top}
+.sheet .input{min-height:36px;padding:6px 8px;border-color:transparent;background:var(--sunk);border-radius:4px}
+.sheet .input:hover{border-color:var(--line)}
+.sheet .input:focus{border-color:var(--ink);background:var(--surface)}
+.sheet select.input{border-color:var(--line)}
+.sheet td.sr{width:44px;text-align:center;font-weight:700;color:var(--muted);padding-top:12px}
+.sheet td.desc{width:320px}
+.desc-ed{display:flex;flex-direction:column;gap:4px}
+.desc-ed .input[data-f$="description"]{font-weight:600}
+.desc-row{display:flex;gap:4px}
+.sheet td.rate{width:140px}
+.sheet td.rate .input,.sheet input[data-qty]{text-align:right}
+.sheet .per{display:block;font-size:12px;color:var(--muted);text-align:right;padding:0 8px}
+.sheet td.amt{width:130px;text-align:right;font-weight:700;padding:12px 10px 0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sheet td.x{width:46px;text-align:center}
+.sheet td.r{text-align:right}
+.sheet tr.sub td{background:var(--sunk);font-size:13px;padding:6px 10px;color:var(--muted)}
+.sheet tr.sub b{color:var(--ink)}
+.qty-cell{display:flex;gap:2px;align-items:center}
+.qty-cell .btn{min-height:30px;padding:2px 8px}
+.xsp{width:34px;flex:none}
+.add-line-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:0 20px 16px}
+.add-line-row .hint{font-size:12px;color:var(--muted)}
+.bill-foot{display:grid;grid-template-columns:minmax(0,1fr) 360px;border-top:1px solid var(--line)}
+.bill-foot>div{padding:18px 20px;min-width:0}
+.bill-foot>div+div{border-left:1px solid var(--line);background:var(--sunk)}
+@media (max-width:900px){.bill-foot{grid-template-columns:1fr}.bill-foot>div+div{border-left:0;border-top:1px solid var(--line)}}
+.words-box{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.words-box span{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.words-box b{font-weight:600}
+.tot-box{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.tot-box>div:not(.totals){display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tot-box label{font-weight:500}
+.tot-box .input{max-width:150px;text-align:right;min-height:36px}
+.savebar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));margin-top:12px;background:var(--bg);border-top:1px solid var(--line);z-index:5}
+.savebar .btn{min-width:110px}
+
+/* ======== printed bill (always paper: black on white, matches his current format) ======== */
+.doc{width:210mm;min-height:297mm;margin:0 auto;background:#fff;color:#000;font:13px/1.35 var(--doc);padding:12mm 12mm 9mm;box-shadow:0 2px 10px rgba(0,0,0,.15);display:flex;flex-direction:column}
+.doc .d-body{flex:1 1 auto;display:flex;flex-direction:column}
+.doc .d-body>table{flex:1 1 auto}
+.doc .d-body>table>tbody>tr:not(.grow)>td{height:1px}
+.doc .lines tr.grow td,.doc .items tr.grow td{height:auto!important;border-bottom:1px solid #000}
+.doc .d-bottom{display:flex;justify-content:space-between;gap:12px;margin-top:5mm;padding-top:2mm;border-top:1px solid #999;font-size:10.5px;color:#444}
+.doc .d-head{text-align:center}
+.doc .d-head h1{font:700 22px var(--doc);letter-spacing:.04em;color:#000}
+.doc .d-head p{margin:2px 0}
+.doc .d-ids{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #000;border-bottom:1px solid #000;margin-top:8px;padding:2px 0;font-size:12.5px;gap:10px}
+.doc .d-ids b{font-weight:700}
+.doc .d-title{text-align:center;font:700 19px var(--doc);margin:12px 0 8px;letter-spacing:.03em}
+.doc table{width:100%;border-collapse:collapse}
+.doc td,.doc th{border:1px solid #000;padding:3px 6px;vertical-align:top}
+.doc .party td{width:50%}
+.doc .party p{margin:1px 0}
+.doc .party .meta{display:grid;grid-template-columns:auto 1fr;gap:1px 8px}
+.doc .lines{margin-top:-1px}
+.doc .lines th{font-weight:700;font-size:12.5px;text-align:center;vertical-align:middle}
+.doc .lines td{border-top:0;border-bottom:0;height:20px}
+.doc .lines tr.sum td{border-top:1px solid #000}
+.doc .lines tbody tr:last-child td{border-bottom:1px solid #000}
+.doc .lines td.c{text-align:center}
+.doc .lines td.r{text-align:right;font-variant-numeric:tabular-nums}
+.doc .lines td.b{font-weight:700}
+.doc .lines .desc{padding-top:6px}
+.doc .lines .att{margin-top:24px;text-align:right;padding-right:8px}
+.doc .tot{margin-top:-1px}
+.doc .tot td.r{text-align:right;width:120px;font-variant-numeric:tabular-nums}
+.doc .tot .lbl{width:160px}
+.doc .tot tr.g td{font-weight:700;font-size:14px}
+.doc .foot{margin-top:-1px}
+.doc .foot td{width:50%;height:96px}
+.doc .foot .sign{text-align:right;display:flex;flex-direction:column;justify-content:space-between;height:100%}
+.doc .notes{margin-top:-1px}
+.doc .notes td{font-size:12px}
+.doc .recv{margin-top:6px;display:flex;justify-content:space-between}
+.doc .cap{font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px!important}
+.doc .party .meta span:nth-child(odd){white-space:nowrap}
+.doc .intro,.doc .items,.doc .terms{margin-top:-1px}
+.doc .intro p{margin:2px 0}
+.doc .items th{font-weight:700;font-size:12.5px;text-align:center;vertical-align:middle;background:#f1f1f1}
+.doc .items td{padding:5px 6px}
+.doc .items td.c{text-align:center}
+.doc .items td.r{text-align:right;font-variant-numeric:tabular-nums}
+.doc .items td.b{font-weight:700}
+.doc .items tr.fill td{height:24px;border-top:0;border-bottom:0}
+.doc .items tbody tr:last-child td{border-bottom:1px solid #000}
+.doc .muted{font-size:11.5px;color:#444}
+.doc .terms td{font-size:12px}
+.doc .terms ol{margin:3px 0 0;padding-left:18px}
+.doc .terms li{margin:1px 0}
+.doc .terms p{margin:4px 0 0}
+.doc .lines tbody tr:last-child td{border-bottom:1px solid #000}
+#print-area{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff!important;height:auto}
+  .app,#modal,#toast{display:none!important}
+  #print-area{display:block}
+  .doc{box-shadow:none;margin:0;break-after:page}
+}
+/* ======== phone ======== */
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;padding-bottom:calc(68px + env(safe-area-inset-bottom, 0px))}
+  .side{position:sticky;top:env(safe-area-inset-top, 0px);height:auto;z-index:20;padding:10px 16px;flex-direction:row;align-items:center}
+  .brand small,.side-foot,.xl{display:none}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:30;flex-direction:row;gap:0;background:var(--side);padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));border-top:1px solid rgba(255,255,255,.08)}
+  .nav a{flex:1 1 0;min-width:0;flex-direction:column;gap:3px;padding:6px 2px;font-size:11px;text-align:center;line-height:1.2}
+  .nav a svg{width:22px;height:22px}
+  .nav a.on{box-shadow:inset 0 3px 0 var(--accent)}
+  .main{padding:18px 16px 32px}
+  #toast{bottom:calc(84px + env(safe-area-inset-bottom, 0px))}
+  .savebar{bottom:calc(68px + env(safe-area-inset-bottom, 0px))}
+}
+@media (max-width:600px){
+  h1{font-size:1.4rem}
+  .page-head{margin-bottom:16px}
+  .page-head .actions{width:100%}
+  .page-head .actions .btn{flex:1 1 auto}
+  .quick{grid-template-columns:1fr 1fr}
+  .quick .btn.primary{grid-column:1/-1}
+  .quick .btn{min-height:52px;font-size:14px;padding:8px 10px}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile b{font-size:1.2rem}
+  .toolbar>*{flex:1 1 100%;max-width:none!important}
+  .toolbar .seg{overflow-x:auto;flex-wrap:nowrap}
+  .toolbar .seg button,.toolbar .seg a{white-space:nowrap}
+  .panel{padding:14px 14px}
+  /* tables become stacked rows */
+  .tbl thead{display:none}
+  .tbl tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+  .tbl tbody tr:last-child{border-bottom:0}
+  .tbl td{border:0!important;padding:0}
+  .tbl td:first-child{flex:1 1 100%}
+  .tbl td.r{margin-left:auto}
+  .tbl td.r+td.r{margin-left:0}
+  .tbl tfoot tr{border-top:2px solid var(--line);border-bottom:0}
+  .tbl tfoot td:empty{display:none}
+  /* sums stack as rows, the sign stays between them */
+  .eq{gap:4px}
+  .eq-item{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:space-between;padding:10px 40px 10px 14px}
+  .eq-item b{font-size:1.3rem}
+  .eq-item small{flex-basis:100%;order:3}
+  .eq-item span{margin-right:auto}
+  .eq .op{display:block;flex:1 1 100%;font-size:1.1rem;line-height:1;margin:0}
+  .eq-sep{display:block;flex:1 1 100%;height:8px;width:auto;background:none;margin:0}
+  .go::after{top:50%;transform:translateY(-50%)}
+  /* bill page: money box first, small paper preview */
+  .bill-grid>aside{order:-1}
+  .paper{padding:8px}
+  .paper .doc{zoom:.42}
+  /* forms open as a sheet from the bottom */
+  .modal{padding:0;align-items:flex-end}
+  .modal-card,.modal-card.narrow{max-width:none;border-radius:14px 14px 0 0;padding:18px 16px calc(14px + env(safe-area-inset-bottom, 0px));max-height:94vh;overflow-y:auto}
+  .modal-foot{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom, 0px));background:var(--surface);padding:10px 0 4px;margin-top:16px}
+  .modal-foot .btn{flex:1}
+  .modal .eq-item{padding:8px 12px}
+}
+
+
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="brand-mark">RK</div><div><b>Ravi Kiran Ops</b><small>Machines · Billing · Staff</small></div></div>
+    <nav class="nav" id="nav">
+      <a href="#" data-nav="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
+      <a href="#bills" data-nav="bills"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h4"/></svg>Bills</a>
+      <a href="#clients" data-nav="clients"><svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg><span>Clients<span class="xl"> &amp; Sites</span></span></a>
+      <a href="#vehicles" data-nav="vehicles"><svg viewBox="0 0 24 24"><path d="M2 17h13V7H2z"/><path d="M15 10h4l3 4v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>Vehicles</a>
+      <a href="#staff" data-nav="staff"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg>Employees</a>
+      <a href="#settings" data-nav="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Settings</a>
+    </nav>
+    <div class="side-foot">Prototype · data is saved in this browser only</div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="modal" class="modal" hidden><div class="modal-card" id="modal-card"></div></div>
+<div id="toast" aria-live="polite"></div>
+<div id="print-area"></div>
+
+<script>
+'use strict';
+/* ---------------- helpers ---------------- */
+const $ = (s, el = document) => el.querySelector(s);
+const main = $('#main');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2 = n => Math.round((+n || 0) * 100) / 100;
+const money = n => (+n || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const rs = n => { n = r2(n); return '₹' + (Number.isInteger(n) ? n.toLocaleString('en-IN') : money(n)); };
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clone = o => JSON.parse(JSON.stringify(o));
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const TODAY = iso(new Date());
+const THIS_MONTH = TODAY.slice(0, 7);
+const PREV_MONTH = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return iso(d).slice(0, 7); })();
+const dmy = s => s ? s.split('-').reverse().join('/') : '';
+const monthName = ym => { if (!ym) return ''; const [y, m] = ym.split('-'); return new Date(+y, +m - 1, 1).toLocaleString('en-IN', {month: 'short', year: 'numeric'}); };
+const daysInMonth = ym => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); };
+const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const addDays = (s, n) => { const d = new Date(s); d.setDate(d.getDate() + n); return iso(d); };
+const fyOf = s => { const [y, m] = s.split('-').map(Number); const st = m >= 4 ? y : y - 1; return pad(st % 100) + '-' + pad((st + 1) % 100); };
+const CUR_FY = fyOf(TODAY);
+const parseQty = s => { s = String(s ?? '').trim(); if (s.includes(':')) { const [h, m] = s.split(':'); return r2((+h || 0) + (+m || 0) / 60); } return +s || 0; };
+const pl = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+const qtyFmt = n => { n = r2(n); return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''); };
+
+function inWords(num) {
+  num = Math.round(num);
+  if (!num) return 'Zero Only';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = n => n < 20 ? a[n] : b[Math.floor(n / 10)] + (n % 10 ? '-' + a[n % 10] : '');
+  const three = n => n >= 100 ? a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + two(n % 100) : '') : two(n);
+  const out = [];
+  const cr = Math.floor(num / 1e7); num %= 1e7;
+  const lk = Math.floor(num / 1e5); num %= 1e5;
+  const th = Math.floor(num / 1000); num %= 1000;
+  if (cr) out.push(three(cr) + ' Crore');
+  if (lk) out.push(two(lk) + ' Lakh');
+  if (th) out.push(two(th) + ' Thousand');
+  if (num) out.push(three(num));
+  return out.join(' ') + ' Only';
+}
+
+function toast(msg) {
+  const d = document.createElement('div'); d.textContent = msg;
+  $('#toast').appendChild(d); setTimeout(() => d.remove(), 2800);
+}
+
+/* ---------------- data ---------------- */
+const DEFAULT_TERMS = {
+  quotation: ['Rates are per hour of machine working as per hour meter reading (tippers per day).', 'Minimum billing of 8 hours per day per machine.', 'Rates include operator and diesel.', 'Transport (shifting of machine to and from site) will be charged extra.', 'GST @ 18% extra as applicable.', 'Daily working hours must be signed on our challan by your site in-charge.', 'Machine breakdown time will not be charged.', 'Payment within 15 days from the date of bill.', 'This quotation is valid for 30 days from the date above.'].join('\n'),
+  proforma: ['This is a proforma invoice, not a tax invoice. The tax invoice will be issued as per actual work done.', 'Advance payment is required before the machine is sent to site.', 'Please pay by NEFT / RTGS / cheque to the bank account given below.', 'Final billing will be as per hours / days on challans signed by your site in-charge.'].join('\n'),
+  invoice: ['Hours / days are as per challans signed by your site in-charge.', 'Payment is due within 15 days from the invoice date.', 'Interest @ 18% per annum will be charged on payments delayed beyond the due date.', 'Please deduct TDS as applicable and share the TDS certificate.', 'Subject to Pune jurisdiction.'].join('\n'),
+};
+function migrate(d) {
+  d.terms = Object.assign(clone(DEFAULT_TERMS), d.terms || {});
+  d.bills.forEach(b => { if (b.terms == null) b.terms = d.terms[b.type]; if (b.subject == null) b.subject = b.type === 'quotation' ? 'Hiring of earth-moving machinery' : ''; if (b.attn == null) b.attn = ''; });
+  return d;
+}
+const KEY = 'rke-ops-v1';
+let DB = load();
+function load() {
+  try { const s = localStorage.getItem(KEY); if (s) { const d = JSON.parse(s); if (d && d.companies && d.bills) return migrate(d); } } catch (e) {}
+  return migrate(seed());
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('Could not save in this browser. Download a backup from Settings.'); } }
+
+function seed() {
+  const ent = (date, challan, qty) => ({date, challan, qty: String(qty)});
+  const line = (vehicleId, description, attachment, unit, rate, entries) => ({vehicleId, description, attachment, unit, rate: String(rate), entries});
+  return {
+    companies: [
+      {id: 'rke', name: 'RAVI KIRAN ENTERPRISES', short: 'Ravi Kiran', address: 'Gat No 452/1/1 Adarsh Nagar Moshi ,Pune 412105',
+        tagline: 'Land Developers and Building Material, Machienery Suppliers', contact: '9850504673', email: 'Mahadev.2581@gmail.com',
+        gst: true, gstin: '27ADCPL6709N1Z5', pan: 'ADCPL6709N', sac: '997313', prefix: 'RKE',
+        bankName: 'Pimpri - Chinchwad Sahakari Bank', bankAc: '000 4022 000 000 979', ifsc: 'IBKL0087PCS',
+        counters: {invoice: 216, proforma: 4, quotation: 12}},
+      {id: 'tl', name: 'T and L Enterprises', short: 'T and L', address: 'Gat No 452/1/1 Adarsh Nagar Moshi ,Pune 412105',
+        tagline: 'Land Developers and Building Material, Machienery Suppliers', contact: '9850504673', email: 'Mahadev.2581@gmail.com',
+        gst: false, gstin: '', pan: 'AGDPL8244N', sac: '', prefix: 'T&L',
+        bankName: 'IDBI Bank', bankAc: '167810 20000 22172', ifsc: 'IBKL0001678',
+        counters: {invoice: 182, proforma: 0, quotation: 0}},
+    ],
+    clients: [
+      {id: 'c1', name: 'Arise Associates', gstin: '27ACIFA6706F1ZH', phone: '', contact: '',
+        address: 'Sr.No. 147,Near GG International School Aundh Ravet BRTS Road Tathawade Pin . 411033',
+        sites: [{id: 's1', name: 'Tathawade Pune'}]},
+      {id: 'c2', name: 'Devta', gstin: '', phone: '', contact: '', address: 'Wakad', sites: [{id: 's2', name: 'Wakad'}]},
+      {id: 'c3', name: 'Shree Ganesh Builders', gstin: '27AAKFS4410M1Z2', phone: '98220 41187', contact: 'Mr. Landge',
+        address: 'Spine Road, Chikhali, Pune 411062', sites: [{id: 's3', name: 'Chikhali – Spine Road'}, {id: 's4', name: 'Moshi – Plot 18'}]},
+      {id: 'c4', name: 'Pune Infra Projects', gstin: '27AAHCP7731Q1ZK', phone: '97300 55120', contact: 'Site Engineer – Mr. Kulkarni',
+        address: 'Phase 3, Hinjewadi, Pune 411057', sites: [{id: 's5', name: 'Hinjewadi Phase 3'}]},
+    ],
+    vehicles: [
+      {id: 'v1', name: 'Pocland Ex70', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 1400, attachment: 'Bucket', status: 'On site', site: 'Arise Associates – Tathawade', operatorId: 'e1'},
+      {id: 'v2', name: 'Hyva', regNo: 'MH 14 KA 2798', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Idle', site: '', operatorId: 'e2'},
+      {id: 'v3', name: 'JCB 3DX', regNo: 'MH 14 JH 4512', type: 'Backhoe loader', companyId: 'rke', unit: 'Hour', rate: 1100, attachment: 'Bucket', status: 'On site', site: 'Shree Ganesh – Chikhali', operatorId: 'e3'},
+      {id: 'v4', name: 'Pocland Ex200', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 2200, attachment: 'Bucket', status: 'On site', site: 'Pune Infra – Hinjewadi', operatorId: 'e6'},
+      {id: 'v5', name: 'Hyva', regNo: 'MH 14 KA 3310', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Under repair', site: '', operatorId: 'e5'},
+    ],
+    employees: [
+      {id: 'e1', name: 'Santosh Pawar', role: 'Operator', phone: '98810 22341', vehicleId: 'v1', salary: 18000, allowance: 200, joined: '2023-04-01',
+        advances: [{id: 'a1', date: '2026-08-14', amount: 5000, note: 'Family function'}],
+        salaries: [{id: 'p1', month: '2026-09', days: 28, earned: 16800, allowanceAmt: 5600, cut: 2000, net: 20400, paidOn: '2026-10-02', mode: 'Cash'}]},
+      {id: 'e2', name: 'Rahul Jadhav', role: 'Driver', phone: '90110 77812', vehicleId: 'v2', salary: 16000, allowance: 150, joined: '2024-06-10',
+        advances: [{id: 'a2', date: '2026-09-02', amount: 3000, note: 'Medical'}],
+        salaries: [{id: 'p2', month: '2026-09', days: 25, earned: 13333, allowanceAmt: 3750, cut: 0, net: 17083, paidOn: '2026-10-02', mode: 'UPI'}]},
+      {id: 'e3', name: 'Vijay Shinde', role: 'Operator', phone: '88050 61290', vehicleId: 'v3', salary: 17000, allowance: 200, joined: '2022-11-15', advances: [],
+        salaries: [{id: 'p3', month: '2026-09', days: 30, earned: 17000, allowanceAmt: 6000, cut: 0, net: 23000, paidOn: '2026-10-02', mode: 'UPI'}]},
+      {id: 'e4', name: 'Ganesh More', role: 'Helper', phone: '77200 18834', vehicleId: 'v4', salary: 12000, allowance: 100, joined: '2025-01-05',
+        advances: [{id: 'a3', date: '2026-10-03', amount: 2000, note: 'Village trip'}], salaries: []},
+      {id: 'e5', name: 'Amol Gaikwad', role: 'Driver', phone: '95450 33018', vehicleId: 'v5', salary: 16000, allowance: 150, joined: '2024-02-20',
+        advances: [{id: 'a4', date: '2026-07-20', amount: 4000, note: 'Room rent'}],
+        salaries: [{id: 'p4', month: '2026-08', days: 27, earned: 13935, allowanceAmt: 4050, cut: 2000, net: 15985, paidOn: '2026-09-03', mode: 'Cash'}]},
+      {id: 'e6', name: 'Sunil Kamble', role: 'Operator', phone: '98602 44710', vehicleId: 'v4', salary: 20000, allowance: 250, joined: '2021-08-01', advances: [], salaries: []},
+    ],
+    bills: [
+      {id: 'b1', type: 'invoice', companyId: 'rke', number: 'RKE / 26-27 /0215', date: '2026-09-20', clientId: 'c1', siteId: 's1', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v1', 'Pocland Ex70', 'Bucket', 'Hour', 1400, [ent('2026-07-29', '2701', 5.25), ent('2026-07-30', '2702', 6.54), ent('2026-07-31', '2703', 1), ent('2026-08-03', '2704', 1.67)])],
+        transport: '5000', notes: '', payments: [], createdAt: 1},
+      {id: 'b2', type: 'invoice', companyId: 'tl', number: 'T&L / 26-27 / 0181', date: '2026-07-30', clientId: 'c2', siteId: 's2', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v2', 'Hyva MH 14 KA 2798', '', 'Day', 6000, [ent('', '', 2)])],
+        transport: '0', notes: '', payments: [{id: 'y1', date: '2026-08-05', amount: 12000, tds: 0, mode: 'UPI', ref: ''}], createdAt: 2},
+      {id: 'b3', type: 'invoice', companyId: 'rke', number: 'RKE / 26-27 /0213', date: '2026-08-31', clientId: 'c3', siteId: 's3', poNo: 'SGB/PO/114', poDate: '2026-08-20', ebillNo: '',
+        lines: [line('v3', 'JCB 3DX MH 14 JH 4512', 'Bucket', 'Hour', 1100, [ent('2026-08-24', '2655', 8), ent('2026-08-25', '2656', 7.5), ent('2026-08-26', '2657', 8.25), ent('2026-08-27', '2658', 6), ent('2026-08-28', '2659', 8), ent('2026-08-29', '2660', 7)])],
+        transport: '3000', notes: '', payments: [{id: 'y2', date: '2026-09-20', amount: 40000, tds: 1044.5, mode: 'Cheque', ref: 'Chq 004512'}], createdAt: 3},
+      {id: 'b4', type: 'invoice', companyId: 'rke', number: 'RKE / 26-27 /0214', date: '2026-09-10', clientId: 'c1', siteId: 's1', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v1', 'Pocland Ex70', 'Bucket', 'Hour', 1400, [ent('2026-09-04', '2688', 7), ent('2026-09-05', '2689', 6.5), ent('2026-09-07', '2690', 8)])],
+        transport: '0', notes: '', payments: [{id: 'y3', date: '2026-10-01', amount: 34916, tds: 602, mode: 'NEFT', ref: 'UTR 6271'}], createdAt: 4},
+      {id: 'b5', type: 'invoice', companyId: 'rke', number: 'RKE / 26-27 /0216', date: '2026-10-05', clientId: 'c4', siteId: 's5', poNo: 'PIP/2026/088', poDate: '2026-09-25', ebillNo: '',
+        lines: [line('v4', 'Pocland Ex200', 'Bucket', 'Hour', 2200, [ent('2026-09-28', '2731', 9), ent('2026-09-29', '2732', 8.5), ent('2026-09-30', '2733', 9), ent('2026-10-01', '2734', 7.75), ent('2026-10-02', '2735', 8)])],
+        transport: '8000', notes: '', payments: [], createdAt: 5},
+      {id: 'b6', type: 'invoice', companyId: 'tl', number: 'T&L / 26-27 / 0182', date: '2026-10-08', clientId: 'c3', siteId: 's4', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v5', 'Hyva MH 14 KA 3310', '', 'Day', 6000, [ent('2026-10-01', '', 1), ent('2026-10-02', '', 1), ent('2026-10-03', '', 1)])],
+        transport: '0', notes: '', payments: [], createdAt: 6},
+      {id: 'b7', type: 'quotation', companyId: 'rke', number: 'RKE/Q/26-27/0012', date: '2026-10-10', clientId: 'c4', siteId: 's5', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v4', 'Pocland Ex200', 'Bucket', 'Hour', 2200, [ent('', '', 200)]), line('v3', 'JCB 3DX MH 14 JH 4512', 'Bucket', 'Hour', 1100, [ent('', '', 100)])],
+        transport: '8000', notes: '', subject: 'Hiring of excavator and backhoe loader for site work', attn: 'Mr. Kulkarni', payments: [], createdAt: 7},
+      {id: 'b8', type: 'proforma', companyId: 'rke', number: 'RKE/PI/26-27/0004', date: '2026-10-12', clientId: 'c1', siteId: 's1', poNo: '', poDate: '', ebillNo: '',
+        lines: [line('v1', 'Pocland Ex70', 'Bucket', 'Hour', 1400, [ent('', '', 50)])],
+        transport: '5000', notes: 'Advance against October work.', payments: [], createdAt: 8},
+    ],
+  };
+}
+
+const company = id => DB.companies.find(c => c.id === id);
+const client = id => DB.clients.find(c => c.id === id);
+const vehicle = id => DB.vehicles.find(v => v.id === id);
+const employee = id => DB.employees.find(e => e.id === id);
+const bill = id => DB.bills.find(b => b.id === id);
+const siteOf = (cl, sid) => cl ? cl.sites.find(s => s.id === sid) : null;
+const vehicleLabel = v => v ? (v.name + (v.regNo ? ' ' + v.regNo : '')) : '';
+
+const TYPE = {
+  quotation: {label: 'Quotation', short: 'Quotation', no: 'Quotation No', date: 'Quotation Date', code: 'Q'},
+  proforma: {label: 'Proforma Invoice', short: 'PI', no: 'PI Number', date: 'PI Date', code: 'PI'},
+  invoice: {label: 'Tax Invoice', short: 'Invoice', no: 'Invoice Number', date: 'Invoice Date', code: ''},
+};
+const typeLabel = b => b.type === 'invoice' && !company(b.companyId)?.gst ? 'Invoice' : TYPE[b.type].label;
+
+function suggestNumber(co, type) {
+  const n = (co.counters[type] || 0) + 1;
+  const mid = TYPE[type].code ? '/' + TYPE[type].code : '';
+  return `${co.prefix}${mid}/${CUR_FY}/${pad(n, 4)}`;
+}
+function bumpCounter(co, type, number) {
+  const m = String(number).match(/(\d+)\s*$/);
+  if (m) co.counters[type] = Math.max(co.counters[type] || 0, +m[1]);
+}
+
+/* ---------------- money ---------------- */
+const lineQty = l => r2(l.entries.reduce((s, e) => s + parseQty(e.qty), 0));
+const lineAmt = l => r2(lineQty(l) * (+l.rate || 0));
+function calc(b) {
+  const co = company(b.companyId) || {};
+  const sub = r2(b.lines.reduce((s, l) => s + lineAmt(l), 0));
+  const transport = r2(+b.transport || 0);
+  const taxable = r2(sub + transport);
+  let cgst = 0, sgst = 0, igst = 0;
+  if (co.gst) {
+    const cl = client(b.clientId);
+    const other = cl && cl.gstin && co.gstin && cl.gstin.slice(0, 2) !== co.gstin.slice(0, 2);
+    if (other) igst = r2(taxable * 0.18); else { cgst = r2(taxable * 0.09); sgst = cgst; }
+  }
+  const raw = r2(taxable + cgst + sgst + igst);
+  const grand = Math.round(raw);
+  return {sub, transport, taxable, cgst, sgst, igst, roundOff: r2(grand - raw), grand};
+}
+const received = b => r2((b.payments || []).reduce((s, p) => s + (+p.amount || 0) + (+p.tds || 0), 0));
+const balance = b => b.type === 'invoice' ? Math.max(0, r2(calc(b).grand - received(b))) : 0;
+function billStatus(b) {
+  if (b.type !== 'invoice') return (b.convertedTo || []).some(bill) ? ['Converted', ''] : ['Open', 'info'];
+  const g = calc(b).grand, rec = received(b);
+  if (rec >= g - 0.5) return ['Paid', 'good'];
+  const d = daysBetween(b.date, TODAY);
+  if (rec > 0) return [`Part paid · ${d} days`, d > 45 ? 'bad' : 'warn'];
+  return [`Not paid · ${d} days`, d > 45 ? 'bad' : 'warn'];
+}
+const chip = ([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`;
+const invoices = () => DB.bills.filter(b => b.type === 'invoice');
+const advanceDue = e => r2(e.advances.reduce((s, a) => s + (+a.amount || 0), 0) - e.salaries.reduce((s, p) => s + (+p.cut || 0), 0));
+
+/* ---------------- modal / forms ---------------- */
+function openModal(html, narrow) {
+  const card = $('#modal-card');
+  card.className = 'modal-card' + (narrow ? ' narrow' : '');
+  card.innerHTML = html; $('#modal').hidden = false;
+  const f = card.querySelector('input:not([readonly]),select,textarea'); if (f) f.focus();
+}
+function closeModal() { $('#modal').hidden = true; $('#modal-card').innerHTML = ''; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+
+function confirmBox(title, msg, yesLabel, onYes) {
+  openModal(`<h2>${esc(title)}</h2><p>${msg}</p><div class="modal-foot"><button class="btn" data-close>Keep it</button><button class="btn primary" id="yes">${esc(yesLabel)}</button></div>`, true);
+  $('#yes').onclick = () => { closeModal(); onYes(); };
+}
+
+function fieldHTML(f) {
+  const v = f.value ?? '';
+  const id = 'f_' + f.id;
+  let ctl;
+  if (f.type === 'select') ctl = `<select class="input" id="${id}" name="${f.id}">${f.options.map(o => { const [ov, ol] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(ov)}" ${String(ov) === String(v) ? 'selected' : ''}>${esc(ol)}</option>`; }).join('')}</select>`;
+  else if (f.type === 'textarea') ctl = `<textarea class="input" id="${id}" name="${f.id}">${esc(v)}</textarea>`;
+  else ctl = `<input class="input" id="${id}" name="${f.id}" type="${f.type || 'text'}" value="${esc(v)}" ${f.type === 'number' ? 'step="any" min="0" inputmode="decimal"' : ''} ${f.readonly ? 'readonly' : ''} ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''}>`;
+  return `<div class="field ${f.full ? 'full' : ''}"><label for="${id}">${esc(f.label)}${f.required ? ' *' : ''}</label>${ctl}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ''}</div>`;
+}
+function openForm({title, fields, submit = 'Save', onSubmit, narrow}) {
+  openModal(`<h2>${esc(title)}</h2><form id="mform" novalidate><div id="merr"></div><div class="form-grid">${fields.map(fieldHTML).join('')}</div>
+    <div class="modal-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" type="submit">${esc(submit)}</button></div></form>`, narrow);
+  $('#mform').addEventListener('submit', e => {
+    e.preventDefault();
+    const vals = Object.fromEntries(new FormData(e.target).entries());
+    for (const k in vals) vals[k] = String(vals[k]).trim();
+    const missing = fields.filter(f => f.required && !vals[f.id]).map(f => f.label);
+    if (missing.length) { $('#merr').innerHTML = `<div class="errors" style="margin-bottom:14px">Please fill: ${missing.map(esc).join(', ')}</div>`; return; }
+    const err = onSubmit(vals);
+    if (err) { $('#merr').innerHTML = `<div class="errors" style="margin-bottom:14px">${esc(err)}</div>`; return; }
+    closeModal();
+  });
+}
+
+function downloadCSV(name, rows) {
+  const csv = rows.map(r => r.map(c => { const s = String(c ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  toast('Downloaded ' + name);
+}
+
+/* ---------------- router ---------------- */
+const go = h => { location.hash = h; };
+const routes = [
+  [/^$/, renderHome],
+  [/^bills(?:\/(\w+))?$/, m => { if (m[1]) presetBills(m[1]); else presetBills(''); renderBills(); }],
+  [/^payments$/, renderPayments],
+  [/^advances$/, renderAdvances],
+  [/^salaries(?:\/(\d{4}-\d{2}))?$/, m => renderSalaries(m[1])],
+  [/^bill\/new(?:\/(\w+))?$/, m => renderEditor(null, m[1])],
+  [/^bill\/(\w+)\/edit$/, m => renderEditor(m[1])],
+  [/^bill\/(\w+)$/, m => renderBillView(m[1])],
+  [/^clients$/, renderClients],
+  [/^client\/(\w+)$/, m => renderClient(m[1])],
+  [/^vehicles$/, renderVehicles],
+  [/^vehicle\/(\w+)$/, m => renderVehicle(m[1])],
+  [/^staff$/, renderStaff],
+  [/^staff\/(\w+)$/, m => renderEmployee(m[1])],
+  [/^settings$/, renderSettings],
+];
+const NAV_OF = {'': 'home', bills: 'bills', bill: 'bills', clients: 'clients', client: 'clients', vehicles: 'vehicles', vehicle: 'vehicles', staff: 'staff', settings: 'settings', payments: 'bills', advances: 'staff', salaries: 'staff'};
+let billFilter = {tab: 'all', company: 'all', period: 'all', q: ''};
+let payPeriod = 'fy';
+const PRESETS = {year: {tab: 'all', period: 'fy'}, month: {tab: 'all', period: 'month'}, pending: {tab: 'pending'}, quotes: {tab: 'quotation'}};
+function presetBills(k) { billFilter = {tab: 'all', company: 'all', period: 'all', q: '', ...(PRESETS[k] || {})}; }
+const inPeriod = (date, period) => period === 'all' || (period === 'fy' ? fyOf(date) === CUR_FY : date.startsWith(THIS_MONTH));
+const periodLabel = p => p === 'fy' ? 'Year 20' + CUR_FY : monthName(THIS_MONTH);
+const paymentsIn = period => invoices().filter(b => period === 'all' || fyOf(b.date) === CUR_FY).flatMap(b => (b.payments || []).map(p => ({p, b})));
+// A sum laid out left to right: [box] − [box] = [box]. Boxes with href/act are clickable.
+function eq(parts, id) {
+  return `<div class="eq">${parts.map(p => {
+    if (p === '|') return '<span class="eq-sep" aria-hidden="true"></span>';
+    if (typeof p === 'string') return `<span class="op" aria-hidden="true">${p}</span>`;
+    const inner = `<span>${p.label}</span><b>${p.value}</b>${p.sub ? `<small>${p.sub}</small>` : ''}`;
+    const cls = `eq-item ${p.tone || ''} ${p.on ? 'on' : ''}`;
+    if (p.href) return `<a class="${cls} go" href="${p.href}">${inner}</a>`;
+    if (p.act) return `<button type="button" class="${cls} go" data-act="${p.act}" data-val="${p.val}" data-id="${id || ''}">${inner}</button>`;
+    return `<div class="${cls}">${inner}</div>`;
+  }).join('')}</div>`;
+}
+function router() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const nav = NAV_OF[h.split('/')[0]] || 'home';
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === nav));
+  closeModal();
+  for (const [re, fn] of routes) { const m = h.match(re); if (m) { fn(m); window.scrollTo(0, 0); return; } }
+  notFound();
+}
+function notFound() { main.innerHTML = `<div class="empty"><b>This page doesn't exist</b><a class="btn" href="#">Go to Home</a></div>`; }
+window.addEventListener('hashchange', router);
+
+/* ---------------- HOME ---------------- */
+function renderHome() {
+  const fyInv = invoices().filter(b => fyOf(b.date) === CUR_FY);
+  const billed = fyInv.reduce((s, b) => s + calc(b).grand, 0);
+  const got = fyInv.reduce((s, b) => s + received(b), 0);
+  const toCome = fyInv.reduce((s, b) => s + balance(b), 0);
+  const fyDue = fyInv.filter(b => balance(b) > 0.5).length;
+  const oldPend = invoices().filter(b => fyOf(b.date) !== CUR_FY).reduce((s, b) => s + balance(b), 0);
+  const monthInv = invoices().filter(b => b.date.startsWith(THIS_MONTH));
+  const onSite = DB.vehicles.filter(v => v.status === 'On site').length;
+  const repair = DB.vehicles.filter(v => v.status === 'Under repair').length;
+  const advTotal = DB.employees.reduce((s, e) => s + Math.max(0, advanceDue(e)), 0);
+  const advPeople = DB.employees.filter(e => advanceDue(e) > 0).length;
+  const salaryPaid = DB.employees.reduce((s, e) => s + e.salaries.filter(p => p.month === PREV_MONTH).reduce((t, p) => t + (+p.net || 0), 0), 0);
+  const paidCount = DB.employees.filter(e => e.salaries.some(p => p.month === PREV_MONTH)).length;
+  const owe = DB.clients.map(c => {
+    const bs = invoices().filter(b => b.clientId === c.id && balance(b) > 0.5);
+    return {c, n: bs.length, amt: bs.reduce((s, b) => s + balance(b), 0), days: Math.max(0, ...bs.map(b => daysBetween(b.date, TODAY)))};
+  }).filter(x => x.n).sort((a, b) => b.days - a.days);
+  const vrows = DB.vehicles.map(v => {
+    let amt = 0; fyInv.forEach(b => b.lines.forEach(l => { if (l.vehicleId === v.id) amt += lineAmt(l); }));
+    return {v, amt};
+  }).sort((a, b) => b.amt - a.amt);
+
+  const openQ = DB.bills.filter(b => b.type !== 'invoice' && billStatus(b)[0] === 'Open').sort((a, b) => b.date.localeCompare(a.date));
+  const advList = DB.employees.filter(e => advanceDue(e) > 0).sort((a, b) => advanceDue(b) - advanceDue(a));
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Home</h1><p>${new Date().toLocaleDateString('en-IN', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p></div></div>
+  <div class="quick">
+    <a class="btn primary" href="#bill/new/invoice"><i>+</i>New bill</a>
+    <button class="btn" data-act="receive"><i>₹</i>Money received</button>
+    <button class="btn" data-act="advance"><i>₹</i>Give advance</button>
+    <button class="btn" data-act="salary"><i>₹</i>Pay salary</button>
+    <a class="btn" href="#bill/new/quotation"><i>+</i>New quotation</a>
+  </div>
+  <h2 class="sec">Money · year 20${CUR_FY}</h2>
+  ${eq([
+    {label: 'Total billing', value: rs(billed), sub: `${pl(fyInv.length, 'bill', 'bills')}`, href: '#bills/year'}, '−',
+    {label: 'Received', value: rs(got), tone: 'good', sub: `${pl(paymentsIn('fy').length, 'payment', 'payments')}`, href: '#payments'}, '=',
+    {label: 'Money to come', value: rs(toCome), tone: toCome > 0.5 ? 'bad' : 'good', sub: `${pl(fyDue, 'bill', 'bills')}`, href: '#bills/pending'},
+    ...(oldPend > 0.5 ? ['+', {label: 'Old years to come', value: rs(oldPend), tone: 'bad', href: '#bills/pending'}] : []),
+  ])}
+  <div class="tiles">
+    <a class="tile go" href="#bills/month"><span>${monthName(THIS_MONTH)} billing</span><b>${rs(monthInv.reduce((s, b) => s + calc(b).grand, 0))}</b><small>${pl(monthInv.length, 'bill', 'bills')}</small></a>
+    <a class="tile go" href="#vehicles"><span>Vehicles working</span><b>${onSite} of ${DB.vehicles.length}</b><small>${repair ? repair + ' in repair' : 'none in repair'}</small></a>
+    <a class="tile go" href="#advances"><span>Advance with staff</span><b class="warn">${rs(advTotal)}</b><small>${pl(advPeople, 'person', 'people')}</small></a>
+    <a class="tile go" href="#salaries/${PREV_MONTH}"><span>${monthName(PREV_MONTH)} salary paid</span><b>${rs(salaryPaid)}</b><small>${paidCount} of ${pl(DB.employees.length, 'person', 'people')}</small></a>
+  </div>
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-head"><h2>Who owes money</h2><a class="btn small" href="#bills/pending">All</a></div>
+      ${owe.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>
+      ${owe.map(x => `<tr class="click" data-href="#client/${x.c.id}"><td><b>${esc(x.c.name)}</b><span class="sub">${x.c.phone ? esc(x.c.phone) : pl(x.n, 'bill', 'bills')}</span></td>
+        <td class="r"><b class="t-bad">${rs(x.amt)}</b><span class="sub">${chip([x.days + ' days', x.days > 45 ? 'bad' : 'warn'])}</span></td><td class="r"><button class="btn small" data-act="receive" data-id="${x.c.id}">₹ Received</button></td></tr>`).join('')}
+      </tbody></table></div>` : `<div class="empty"><b>Nobody owes money</b></div>`}
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Vehicles · earned this year</h2><a class="btn small" href="#vehicles">All</a></div>
+      <div class="tbl-wrap"><table class="tbl"><tbody>
+      ${vrows.map(({v, amt}) => `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.site || v.type)}</span></td>
+        <td>${statusChip(v.status)}</td><td class="r"><b>${rs(amt)}</b></td></tr>`).join('')}
+      </tbody></table></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Quotations waiting</h2><a class="btn small" href="#bills/quotes">All</a></div>
+      ${openQ.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${openQ.map(b => `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(client(b.clientId)?.name)}</b><span class="sub">${esc(TYPE[b.type].short)} ${esc(b.number)} · ${dmy(b.date)}</span></td><td class="r"><b>${rs(calc(b).grand)}</b></td><td class="r"><button class="btn small" data-act="convert" data-id="${b.id}" data-to="invoice">Make bill</button></td></tr>`).join('')}</tbody></table></div>`
+        : `<div class="empty"><b>No quotation waiting</b><a class="linkbtn" href="#bill/new/quotation">Make a quotation</a></div>`}
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Advance to recover</h2><a class="btn small" href="#advances">All</a></div>
+      ${advList.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${advList.map(e => `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || '')}</span></td><td class="r"><b class="t-bad">${rs(advanceDue(e))}</b></td><td class="r"><button class="btn small" data-act="salary-one" data-id="${e.id}">Pay salary</button></td></tr>`).join('')}</tbody></table></div>`
+        : `<div class="empty"><b>No advance pending</b></div>`}
+    </section>
+  </div>`;
+}
+const statusChip = s => chip([s === 'Under repair' ? 'In repair' : s, s === 'On site' ? 'good' : s === 'Under repair' ? 'bad' : '']);
+
+
+/* ---------------- BILLS LIST ---------------- */
+function renderBills() {
+  const f = billFilter, q = f.q.toLowerCase();
+  const isInv = !['quotation', 'proforma'].includes(f.tab);
+  const list = DB.bills.filter(b => (isInv ? b.type === 'invoice' && (f.tab === 'all' || (f.tab === 'pending' ? balance(b) > 0.5 : balance(b) <= 0.5)) : b.type === f.tab)
+    && (f.company === 'all' || b.companyId === f.company) && inPeriod(b.date, f.period)
+    && (!q || [b.number, client(b.clientId)?.name, siteOf(client(b.clientId), b.siteId)?.name, ...b.lines.map(l => l.description)].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+  const total = list.reduce((t, b) => t + calc(b).grand, 0), rec = list.reduce((t, b) => t + (isInv ? received(b) : 0), 0), pend = list.reduce((t, b) => t + balance(b), 0);
+  const tab = (v, l) => `<button data-filter="tab" data-val="${v}" class="${f.tab === v ? 'on' : ''}">${l}</button>`;
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Bills</h1></div>
+    <div class="actions"><button class="btn" data-act="csv-bills">Excel</button><a class="btn" href="#bill/new/quotation">+ Quotation</a><a class="btn primary" href="#bill/new/invoice">+ New bill</a></div></div>
+  <div class="toolbar">
+    <div class="seg">${tab('all', 'All bills')}${tab('pending', 'Not paid')}${tab('paid', 'Paid')}${tab('quotation', 'Quotations')}${tab('proforma', 'Proforma')}</div>
+    <select class="input" id="bill-co" style="max-width:190px" aria-label="Company"><option value="all">Both companies</option>${DB.companies.map(c => `<option value="${c.id}" ${f.company === c.id ? 'selected' : ''}>${esc(c.short)}</option>`).join('')}</select>
+    <input class="input search" id="bill-q" placeholder="Search client, bill no, vehicle" value="${esc(f.q)}">
+    <select class="input${f.period !== 'all' ? ' active' : ''}" id="bill-dt" style="max-width:190px" aria-label="Date">${[['all', 'Any date'], ['fy', periodLabel('fy')], ['month', periodLabel('month')]].map(([v, l]) => `<option value="${v}" ${f.period === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+  </div>
+  ${isInv ? eq([{label: 'Bill amount', value: rs(total), sub: `${pl(list.length, 'bill', 'bills')}`}, '−', {label: 'Received', value: rs(rec), tone: 'good'}, '=', {label: 'Money to come', value: rs(pend), tone: pend > 0.5 ? 'bad' : 'good'}])
+    : eq([{label: f.tab === 'quotation' ? 'Quotations' : 'Proforma invoices', value: list.length}, {label: 'Total value', value: rs(total)}])}
+  <section class="panel">
+  ${list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill</th><th>Client</th><th class="r">Amount</th>${isInv ? '<th class="r">To come</th>' : ''}<th>Status</th></tr></thead><tbody>
+  ${list.map(b => { const cl = client(b.clientId); return `<tr class="click" data-href="#bill/${b.id}">
+    <td><b>${esc(b.number)}</b><span class="sub">${dmy(b.date)} · ${esc(company(b.companyId)?.short)}</span></td>
+    <td><b>${esc(cl?.name || '—')}</b><span class="sub">${esc(b.lines.map(l => l.description).join(', '))}</span></td>
+    <td class="r"><b>${rs(calc(b).grand)}</b></td>${isInv ? `<td class="r">${balance(b) > 0.5 ? `<b class="t-bad">${rs(balance(b))}</b>` : '—'}</td>` : ''}<td>${chip(billStatus(b))}</td></tr>`; }).join('')}
+  </tbody><tfoot><tr><td colspan="2">Total</td><td class="r">${rs(total)}</td>${isInv ? `<td class="r">${rs(pend)}</td>` : ''}<td></td></tr></tfoot></table></div>`
+    : `<div class="empty"><b>No bills here</b></div>`}
+  </section>`;
+  const qi = $('#bill-q');
+  qi.addEventListener('input', () => { billFilter.q = qi.value; const pos = qi.selectionStart; renderBills(); const n = $('#bill-q'); n.focus(); n.setSelectionRange(pos, pos); });
+  $('#bill-co').addEventListener('change', ev => { billFilter.company = ev.target.value; renderBills(); });
+  $('#bill-dt').addEventListener('change', ev => { billFilter.period = ev.target.value; renderBills(); });
+}
+
+
+/* ---------------- BILL EDITOR ---------------- */
+let draft = null;
+const DEFAULT_SUBJECT = 'Hiring of earth-moving machinery';
+const UNIT_OPTS = [['Hour', 'Hour'], ['Day', 'Day'], ['Trip', 'Trip'], ['Brass', 'Brass'], ['Month', 'Month']];
+const unitWord = u => u === 'Hour' ? 'hrs' : u.toLowerCase() + 's';
+function blankLine(type) { return {vehicleId: '', description: '', attachment: '', unit: 'Hour', rate: '', entries: [{date: type === 'invoice' ? TODAY : '', challan: '', qty: ''}]}; }
+function collapseEntries(d) {
+  d.lines.forEach(l => {
+    if (l.entries.length !== 1 || l.entries[0].date || l.entries[0].challan) { const q = lineQty(l); l.entries = [{date: '', challan: '', qty: q ? String(q) : ''}]; }
+  });
+}
+function renderEditor(id, newType) {
+  if (id) {
+    const src = bill(id); if (!src) return notFound();
+    draft = clone(src); draft._isNew = false;
+    if (draft.terms == null) draft.terms = DB.terms[draft.type];
+  } else {
+    const type = TYPE[newType] ? newType : 'invoice';
+    const co = DB.companies[0];
+    draft = {id: null, type, companyId: co.id, number: suggestNumber(co, type), date: TODAY, clientId: '', siteId: '', poNo: '', poDate: '', ebillNo: '',
+      subject: type === 'quotation' ? DEFAULT_SUBJECT : '', attn: '', lines: [blankLine(type)], transport: '', terms: DB.terms[type], notes: '', payments: [], _isNew: true, _numTouched: false};
+  }
+  draft.lines.forEach(l => { if (!l.entries.length) l.entries = [{date: '', challan: '', qty: ''}]; });
+  drawEditor();
+}
+function drawEditor() {
+  const d = draft, co = company(d.companyId), cl = client(d.clientId), T = TYPE[d.type];
+  const challan = d.type === 'invoice';
+  const sel = (path, opts, val, extra = '') => `<select class="input" data-f="${path}" ${extra}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(val) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+  const inp = (path, val, type = 'text', extra = '') => `<input class="input" data-f="${path}" type="${type}" value="${esc(val ?? '')}" ${extra}>`;
+  const num = 'step="any" min="0" inputmode="decimal"';
+  const vehicleOpts = [['', 'Choose vehicle…'], ...DB.vehicles.map(v => [v.id, vehicleLabel(v) + ' · ' + rs(v.rate) + '/' + v.unit.toLowerCase()]), ['__other', 'Other (type description)']];
+  const otherState = co.gst && cl && cl.gstin && co.gstin && cl.gstin.slice(0, 2) !== co.gstin.slice(0, 2);
+
+  const descCell = (l, li) => `<div class="desc-ed">
+      ${sel(`lines.${li}.vehicleId`, vehicleOpts, l.vehicleId || (!l.vehicleId && l.description ? '__other' : ''), 'data-redraw aria-label="Vehicle"')}
+      ${inp(`lines.${li}.description`, l.description, 'text', 'placeholder="Description printed on bill" aria-label="Description"')}
+      <div class="desc-row">${inp(`lines.${li}.attachment`, l.attachment, 'text', 'placeholder="Attachment (Bucket, Breaker…)" aria-label="Attachment"')}
+      ${challan ? sel(`lines.${li}.unit`, UNIT_OPTS.map(([v]) => [v, 'Per ' + v.toLowerCase()]), l.unit, 'data-redraw aria-label="Charged per" style="max-width:130px"') : ''}</div>
+    </div>`;
+  const delLine = li => d.lines.length > 1 ? `<button type="button" class="btn small ghost" title="Remove this vehicle" data-act="del-line" data-l="${li}">✕</button>` : '';
+
+  let head, body = '';
+  if (challan) {
+    head = `<tr><th class="c">#</th><th>Vehicle / Description</th><th>Date</th><th>Challan No</th><th class="r">Hours / Days</th><th class="r">Rate (₹)</th><th class="r">Amount (₹)</th><th></th></tr>`;
+    d.lines.forEach((l, li) => {
+      const n = l.entries.length, span = n + 1;
+      l.entries.forEach((e, ei) => {
+        body += `<tr>` + (ei === 0 ? `<td class="sr" rowspan="${span}">${li + 1}</td><td class="desc" rowspan="${span}">${descCell(l, li)}</td>` : '')
+          + `<td>${inp(`lines.${li}.entries.${ei}.date`, e.date, 'date', 'aria-label="Date"')}</td>`
+          + `<td>${inp(`lines.${li}.entries.${ei}.challan`, e.challan, 'text', 'inputmode="numeric" aria-label="Challan no"')}</td>`
+          + `<td><div class="qty-cell">${inp(`lines.${li}.entries.${ei}.qty`, e.qty, 'text', `inputmode="decimal" data-qty aria-label="Quantity" placeholder="${l.unit === 'Hour' ? '5.25' : '1'}"`)}${n > 1 ? `<button type="button" class="btn small ghost" title="Remove this day" data-act="del-entry" data-l="${li}" data-e="${ei}">✕</button>` : '<span class="xsp"></span>'}</div></td>`
+          + (ei === 0 ? `<td class="rate" rowspan="${span}">${inp(`lines.${li}.rate`, l.rate, 'number', num + ' aria-label="Rate"')}<span class="per">per ${l.unit.toLowerCase()}</span></td><td class="amt" rowspan="${span}" id="la-${li}">${money(lineAmt(l))}</td><td class="x" rowspan="${span}">${delLine(li)}</td>` : '')
+          + `</tr>`;
+      });
+      body += `<tr class="sub"><td colspan="2"><button type="button" class="linkbtn" data-act="add-entry" data-l="${li}">+ Add next day</button></td><td class="r">Total <b id="lq-${li}">${qtyFmt(lineQty(l))}</b> ${unitWord(l.unit)}</td></tr>`;
+    });
+  } else {
+    head = `<tr><th class="c">#</th><th>Vehicle / Description</th><th>Charged per</th><th class="r">${d.type === 'quotation' ? 'Est. qty' : 'Qty'}</th><th class="r">Rate (₹)</th><th class="r">Amount (₹)</th><th></th></tr>`;
+    d.lines.forEach((l, li) => {
+      body += `<tr><td class="sr">${li + 1}</td><td class="desc">${descCell(l, li)}</td>
+        <td style="width:130px">${sel(`lines.${li}.unit`, UNIT_OPTS, l.unit, 'data-redraw aria-label="Charged per"')}</td>
+        <td style="width:120px">${inp(`lines.${li}.entries.0.qty`, l.entries[0].qty, 'text', `inputmode="decimal" data-qty aria-label="Quantity" placeholder="${d.type === 'quotation' ? 'optional' : '0'}"`)}</td>
+        <td class="rate">${inp(`lines.${li}.rate`, l.rate, 'number', num + ' aria-label="Rate"')}<span class="per">per ${l.unit.toLowerCase()}</span></td>
+        <td class="amt" id="la-${li}">${money(lineAmt(l))}</td><td class="x">${delLine(li)}</td></tr>`;
+    });
+  }
+
+  main.innerHTML = `
+  <a class="crumb" href="${d._isNew ? '#bills' : '#bill/' + d.id}">← ${d._isNew ? 'All bills' : 'Back to bill'}</a>
+  <div class="page-head"><div><h1>${d._isNew ? 'New ' + T.label.toLowerCase() : 'Edit ' + esc(d.number)}</h1></div></div>
+  <div id="ed-err"></div>
+  <section class="panel sheet-panel">
+    <div class="sheet-top">
+      <div class="seg" role="tablist">${Object.keys(TYPE).map(t => `<button type="button" data-act="set-type" data-val="${t}" class="${d.type === t ? 'on' : ''}">${TYPE[t].label}</button>`).join('')}</div>
+      <div class="co-pick"><label for="ed-co">Company</label>${sel('companyId', DB.companies.map(c => [c.id, c.short + (c.gst ? ' · with GST' : ' · no GST')]), d.companyId, 'data-redraw id="ed-co"')}</div>
+    </div>
+    <div class="party-ed">
+      <div>
+        <div class="pe-title">${d.type === 'quotation' ? 'Quotation to' : 'Bill to'}</div>
+        <div class="field"><label>Client *</label>${sel('clientId', [['', 'Choose client…'], ...DB.clients.map(c => [c.id, c.name])], d.clientId, 'data-redraw')}
+          <span class="hint">Not in the list? <button type="button" class="linkbtn" data-act="quick-client">Add a new client</button></span></div>
+        <div class="field"><label>Site</label>${cl && cl.sites.length ? sel('siteId', cl.sites.map(s => [s.id, s.name]), d.siteId) : `<input class="input" readonly value="${cl ? 'No sites yet. Add one on the client page.' : 'Choose a client first'}">`}</div>
+        ${cl ? `<div class="client-card"><b>${esc(cl.name)}</b><br>${esc(cl.address || 'No address saved')}<br>${cl.gstin ? 'GSTIN ' + esc(cl.gstin) : 'No GSTIN'}${otherState ? ' · <b>other state: IGST 18% applies</b>' : ''}</div>` : ''}
+      </div>
+      <div>
+        <div class="pe-title">${T.label} details</div>
+        <div class="form-grid two">
+          <div class="field"><label>${T.no} *</label>${inp('number', d.number)}</div>
+          <div class="field"><label>${T.date}</label>${inp('date', d.date, 'date')}</div>
+          ${d.type === 'quotation' ? `
+          <div class="field full"><label>Subject</label>${inp('subject', d.subject)}</div>
+          <div class="field full"><label>Kind attention</label>${inp('attn', d.attn, 'text', `placeholder="${esc(cl?.contact || 'Contact person')}"`)}</div>` : `
+          <div class="field"><label>PO No</label>${inp('poNo', d.poNo)}</div>
+          <div class="field"><label>PO Date</label>${inp('poDate', d.poDate, 'date')}</div>
+          ${co.gst && d.type === 'invoice' ? `<div class="field"><label>E-Bill No</label>${inp('ebillNo', d.ebillNo)}</div>` : ''}
+          ${co.gst ? `<div class="field"><label>HSN / SAC</label><input class="input" readonly value="${esc(co.sac)}"></div>` : ''}`}
+        </div>
+      </div>
+    </div>
+    <div class="sheet-wrap"><table class="sheet"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <div class="add-line-row"><button type="button" class="btn small" data-act="add-line">+ Add another vehicle</button>
+      ${challan ? '<span class="hint">Hours can be typed as 6.5 or 6:30 (6 hrs 30 min). 6:30 is saved as 6.50.</span>' : d.type === 'quotation' ? '<span class="hint">Leave qty empty to quote rates only.</span>' : ''}</div>
+    <div class="bill-foot">
+      <div class="stack" style="gap:16px">
+        <div class="words-box"><span>Amount in words</span><b id="ed-words"></b></div>
+        <div class="field"><label for="ed-terms">Terms &amp; conditions <button type="button" class="linkbtn" data-act="reset-terms" style="margin-left:8px;font-size:12px">Use default ${T.short.toLowerCase()} terms</button></label>
+          <textarea class="input" id="ed-terms" data-f="terms" rows="7">${esc(d.terms)}</textarea><span class="hint">One point per line. Printed as a numbered list. Change the defaults in Settings.</span></div>
+        <div class="field"><label for="ed-notes">Remarks (optional)</label>${inp('notes', d.notes, 'text', 'id="ed-notes" placeholder="Printed under the terms"')}</div>
+      </div>
+      <div>
+        <div class="tot-box">
+          <div><span>Total of work</span><b class="num" id="t-sub"></b></div>
+          <div><label for="ed-tr">Transport</label>${inp('transport', d.transport, 'number', num + ' id="ed-tr" placeholder="0.00"')}</div>
+          <div class="totals" id="t-rest"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="savebar">
+    <a class="btn" href="${d._isNew ? '#bills' : '#bill/' + d.id}">Cancel</a>
+    <button class="btn" data-act="save">Save</button>
+    <button class="btn primary" data-act="save-print">Save &amp; print</button>
+  </div>`;
+  drawTotals();
+}
+function drawTotals() {
+  const c = calc(draft), co = company(draft.companyId);
+  const row = (l, v, cls = '') => `<div class="${cls}"><span>${l}</span><b class="num">${money(v)}</b></div>`;
+  $('#t-sub').textContent = money(c.sub);
+  $('#t-rest').innerHTML = row('Total amount', c.taxable)
+    + (co.gst ? (c.igst ? row('Add IGST 18%', c.igst) : row('Add CGST 9%', c.cgst) + row('Add SGST 9%', c.sgst)) : `<div><span>GST</span><span class="chip">Not charged</span></div>`)
+    + (c.roundOff ? row('Round off', c.roundOff) : '')
+    + `<div class="grand"><span>Grand total</span><span class="num">${rs(c.grand)}</span></div>`;
+  $('#ed-words').textContent = 'Rupees ' + inWords(c.grand);
+  draft.lines.forEach((l, li) => {
+    const a = $('#la-' + li); if (a) a.textContent = money(lineAmt(l));
+    const q = $('#lq-' + li); if (q) q.textContent = qtyFmt(lineQty(l));
+  });
+}
+function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = val; }
+function onEditorInput(t) {
+  const path = t.dataset.f; if (!path || !draft) return false;
+  setPath(draft, path, t.value);
+  if (path === 'number') draft._numTouched = true;
+  return true;
+}
+function onEditorChange(t) {
+  const path = t.dataset.f;
+  if (t.hasAttribute('data-qty') && t.value.includes(':')) {
+    const v = parseQty(t.value); toast(`${t.value} hrs saved as ${v.toFixed(2)} hrs`);
+    t.value = String(v); setPath(draft, path, t.value);
+  }
+  const m = path.match(/^lines\.(\d+)\.vehicleId$/);
+  if (m) {
+    const l = draft.lines[+m[1]];
+    if (t.value === '__other') { l.vehicleId = ''; if (!l.description) l.description = 'Machine'; }
+    else { const v = vehicle(t.value); if (v) { l.description = vehicleLabel(v); l.unit = v.unit; l.rate = String(v.rate); l.attachment = v.attachment || '';
+      const co = company(v.companyId); if (draft._isNew && co && co.id !== draft.companyId && draft.lines.length === 1) { draft.companyId = co.id; if (!draft._numTouched) draft.number = suggestNumber(co, draft.type); toast(`Company set to ${co.short}. This vehicle bills under it.`); } } }
+  }
+  if (path === 'clientId') { const cl = client(t.value); draft.siteId = cl && cl.sites[0] ? cl.sites[0].id : ''; }
+  if (path === 'companyId' && draft._isNew && !draft._numTouched) draft.number = suggestNumber(company(draft.companyId), draft.type);
+  if (t.hasAttribute('data-redraw')) drawEditor(); else drawTotals();
+}
+function saveDraft(andPrint) {
+  const d = draft, errs = [];
+  if (!d.number.trim()) errs.push('Bill number is empty.');
+  if (!d.clientId) errs.push('Choose a client.');
+  d.lines.forEach((l, i) => {
+    if (!l.description.trim()) errs.push(`Row ${i + 1}: choose a vehicle or type a description.`);
+    if (!(+l.rate > 0)) errs.push(`Row ${i + 1}: rate is missing.`);
+    if (d.type !== 'quotation' && !(lineQty(l) > 0)) errs.push(`Row ${i + 1}: enter hours or days.`);
+  });
+  const dup = DB.bills.find(b => b.id !== d.id && b.companyId === d.companyId && b.number.replace(/\s/g, '') === d.number.replace(/\s/g, ''));
+  if (dup) errs.push(`Number ${d.number} is already used by another ${TYPE[dup.type].label.toLowerCase()}.`);
+  if (errs.length) { $('#ed-err').innerHTML = `<div class="errors" style="margin-bottom:16px">Please fix these before saving:<ul>${errs.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`; window.scrollTo(0, 0); return; }
+  const isNew = d._isNew; delete d._isNew; delete d._numTouched;
+  d.lines.forEach(l => {
+    l.entries = l.entries.filter(e => parseQty(e.qty) > 0 || e.date || e.challan);
+    if (!l.entries.length) l.entries = [{date: '', challan: '', qty: ''}];
+  });
+  if (isNew) { d.id = uid(); d.createdAt = Date.now(); DB.bills.push(d); }
+  else { const i = DB.bills.findIndex(b => b.id === d.id); DB.bills[i] = d; }
+  bumpCounter(company(d.companyId), d.type, d.number);
+  save(); toast(`${TYPE[d.type].label} ${d.number} saved`); const id = d.id; draft = null; go('#bill/' + id);
+  if (andPrint) setTimeout(() => printBill(id), 350);
+}
+
+/* ---------------- BILL VIEW + PRINT ---------------- */
+function termsList(b) {
+  return String(b.terms ?? DB.terms[b.type] ?? '').split('\n').map(s => s.replace(/^\s*(\d+[.)]|[-•*])\s*/, '').trim()).filter(Boolean);
+}
+function docHTML(b) {
+  const co = company(b.companyId), cl = client(b.clientId) || {}, c = calc(b), site = siteOf(cl, b.siteId);
+  const challan = b.type === 'invoice', isQ = b.type === 'quotation';
+  const title = b.type === 'invoice' ? (co.gst ? 'TAX INVOICE' : 'INVOICE') : b.type === 'proforma' ? 'PROFORMA INVOICE' : 'QUOTATION';
+  const rateOnly = isQ && c.sub === 0;
+  const amt = n => money(n).replace(/\.00$/, '');
+  let rows = '', used = 0;
+  if (challan) {
+    b.lines.forEach((l, i) => {
+      const ents = l.entries.length ? l.entries : [{date: '', challan: '', qty: ''}];
+      const show = !(ents.length === 1 && !ents[0].date && !ents[0].challan);
+      const span = (show ? ents.length : 0) + 1;
+      const lead = `<td class="c" rowspan="${span}">${i + 1}</td><td class="desc" rowspan="${span}"><div style="text-align:center">${esc(l.description)}</div>${l.attachment ? `<div class="att">${esc(l.attachment)}</div>` : ''}</td>`;
+      if (show) ents.forEach((e, ei) => { rows += `<tr>${ei === 0 ? lead : ''}<td class="c">${dmy(e.date)}</td><td class="c">${esc(e.challan)}</td><td class="r">${e.qty !== '' ? qtyFmt(parseQty(e.qty)) : ''}</td><td></td><td></td></tr>`; });
+      rows += `<tr class="sum">${show ? '' : lead}<td></td><td></td><td class="r b">${qtyFmt(lineQty(l))}</td><td class="r b">${amt(l.rate)}</td><td class="r b">${amt(lineAmt(l))}</td></tr>`;
+      used += span;
+    });
+    for (let i = used; i < 6; i++) rows += `<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    rows += `<tr class="grow"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  } else {
+    b.lines.forEach((l, i) => {
+      const q = lineQty(l);
+      rows += `<tr><td class="c">${i + 1}</td><td class="desc2"><b>${esc(l.description)}</b>${l.attachment ? `<div class="muted">with ${esc(l.attachment)}</div>` : ''}</td>
+        ${co.gst ? `<td class="c">${esc(co.sac)}</td>` : ''}<td class="c">${esc(l.unit)}</td><td class="r">${q ? qtyFmt(q) + ' ' + unitWord(l.unit) : '—'}</td>
+        <td class="r">${amt(l.rate)}<div class="muted">per ${l.unit.toLowerCase()}</div></td><td class="r b">${q ? amt(lineAmt(l)) : '—'}</td></tr>`;
+      used++;
+    });
+    if (+b.transport && rateOnly) { rows += `<tr><td class="c">${b.lines.length + 1}</td><td class="desc2"><b>Transport</b><div class="muted">Shifting of machine to and from site</div></td>${co.gst ? '<td></td>' : ''}<td class="c">Lump sum</td><td class="r">—</td><td class="r">${amt(b.transport)}</td><td class="r b">${amt(b.transport)}</td></tr>`; used++; }
+    rows += `<tr class="fill grow"><td></td><td></td>${co.gst ? '<td></td>' : ''}<td></td><td></td><td></td><td></td></tr>`;
+  }
+  const tr = (l, v) => `<tr><td class="lbl">${l}</td><td class="r">${v}</td></tr>`;
+  const tot = tr('Transport', money(c.transport)) + tr('Total Amount', money(c.taxable))
+    + (co.gst ? (c.igst ? tr('Add IGST &nbsp; 18 %', money(c.igst)) : tr('Add CGST &nbsp; 9 %', money(c.cgst)) + tr('Add SGST &nbsp; 9 %', money(c.sgst))) : '')
+    + (c.roundOff ? tr('Round Off', money(c.roundOff)) : '')
+    + `<tr class="g"><td class="lbl">Grand Total</td><td class="r">${money(c.grand)}</td></tr>`;
+  const metaRows = isQ
+    ? [[TYPE[b.type].no, b.number], [TYPE[b.type].date, dmy(b.date)], ['Valid Till', dmy(addDays(b.date, 30))], ['Kind Attn', b.attn || cl.contact || ''], ...(cl.phone ? [['Phone', cl.phone]] : [])]
+    : [[TYPE[b.type].no, b.number], [TYPE[b.type].date, dmy(b.date)], ...(co.gst ? [['HSN CODE', co.sac]] : []), ['PO NO', b.poNo], ['PO Date', dmy(b.poDate)], ...(co.gst && challan ? [['E – Bill No', b.ebillNo]] : [])];
+  const terms = termsList(b);
+  const items = challan
+    ? `<table class="lines"><thead><tr><th style="width:42px">Sr No</th><th>Description</th><th style="width:92px">Date</th><th style="width:70px">Challan No</th><th style="width:76px">Hours Qty / Day</th><th style="width:70px">Rate</th><th style="width:96px">Amount</th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<table class="items"><thead><tr><th style="width:42px">Sr No</th><th>Description of Machinery</th>${co.gst ? '<th style="width:70px">SAC</th>' : ''}<th style="width:70px">Charged Per</th><th style="width:84px">${isQ ? 'Est. Qty' : 'Qty'}</th><th style="width:90px">Rate (₹)</th><th style="width:100px">Amount (₹)</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<div class="doc">
+    <div class="d-head"><h1>${esc(co.name)}</h1><p>${esc(co.address)}</p><p>${esc(co.tagline)} Contact : ${esc(co.contact)}</p></div>
+    <div class="d-ids"><span>${co.gst ? `<b>GSTIN : ${esc(co.gstin)}</b> &nbsp; ` : ''}<b>PAN NO : ${esc(co.pan)}</b> &nbsp; EMAIL : ${esc(co.email)}</span><b>${isQ ? '' : 'ORIGINAL FOR BUYER'}</b></div>
+    <div class="d-title">${title}</div>
+    <table class="party"><tr>
+      <td><p class="cap">${isQ ? 'To' : 'Bill To'}</p><p><b>${esc(cl.name)}</b></p><p>${esc(cl.address)}</p>${site ? `<p>Site :- ${esc(site.name)}</p>` : ''}${cl.gstin ? `<p style="margin-top:6px"><b>GSTIN : ${esc(cl.gstin)}</b></p>` : ''}</td>
+      <td><div class="meta">${metaRows.map(([k, v]) => `<span>${k}</span><span>: ${esc(v)}</span>`).join('')}</div></td>
+    </tr></table>
+    ${isQ ? `<table class="intro"><tr><td><p><b>Sub :</b> ${esc(b.subject || DEFAULT_SUBJECT)}</p><p>Dear Sir,</p><p>With reference to your enquiry, we are pleased to quote our rates for the following machinery${site ? ' at your ' + esc(site.name) + ' site' : ''}:</p></td></tr></table>` : ''}
+    <div class="d-body">${items}</div>
+    ${rateOnly ? `<table class="tot"><tr><td>${co.gst ? 'GST @ 18% extra as applicable.' : ''} Final bill will be as per actual hours / days worked, recorded on signed challans.</td></tr></table>`
+      : `<table class="tot"><tr><td style="vertical-align:middle"><b>Rs. In Words :-</b><br>${esc(inWords(c.grand))}</td><td style="padding:0;width:282px"><table style="margin:-1px">${tot}</table></td></tr></table>`}
+    ${terms.length || b.notes ? `<table class="terms"><tr><td>${terms.length ? `<b>Terms &amp; Conditions :</b><ol>${terms.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : ''}${b.notes ? `<p><b>Remarks :</b> ${esc(b.notes)}</p>` : ''}</td></tr></table>` : ''}
+    <table class="foot"><tr>
+      <td><b>Bank Details :-</b><br>Bank Name :- ${esc(co.bankName)}<br><b>Current A/c No :- ${esc(co.bankAc)}</b><br><b>IFSC CODE :- ${esc(co.ifsc)}</b></td>
+      <td><div class="sign"><span>For :- ${esc(co.name)}</span><span>Authorised Signature</span></div></td>
+    </tr></table>
+    ${isQ ? '<div class="recv"><span>We look forward to your valued order.</span></div>' : '<div class="recv"><span>Receivers Signature &amp; Stamp</span></div>'}
+    <div class="d-bottom"><span>${esc(co.name)} · ${esc(co.contact)} · ${esc(co.email)}</span><span>This is a computer generated ${esc(title.toLowerCase())}.</span></div>
+  </div>`;
+}
+function printBill(id) {
+  const b = bill(id); if (!b) return;
+  $('#print-area').innerHTML = docHTML(b);
+  const old = document.title; document.title = b.number.replace(/[\/\s&]+/g, '-');
+  setTimeout(() => { window.print(); document.title = old; }, 50);
+}
+function renderBillView(id) {
+  const b = bill(id); if (!b) return notFound();
+  const c = calc(b), cl = client(b.clientId), rec = received(b);
+  const from = b.convertedFrom && bill(b.convertedFrom);
+  const kids = (b.convertedTo || []).map(bill).filter(Boolean);
+  const convertBtns = b.type === 'quotation' ? `<button class="btn block" data-act="convert" data-id="${b.id}" data-to="proforma">Make Proforma Invoice</button><button class="btn block" data-act="convert" data-id="${b.id}" data-to="invoice">Make Tax Invoice</button>`
+    : b.type === 'proforma' ? `<button class="btn block" data-act="convert" data-id="${b.id}" data-to="invoice">Make Tax Invoice</button>` : '';
+  main.innerHTML = `
+  <a class="crumb" href="#bills">← All bills</a>
+  <div class="page-head"><div><h1>${esc(typeLabel(b))} ${esc(b.number)}</h1><p>${esc(cl?.name || '')} · ${esc(siteOf(cl, b.siteId)?.name || '')} · ${dmy(b.date)} &nbsp;${chip(billStatus(b))}</p></div></div>
+  <div class="grid-side bill-grid">
+    <div class="paper">${docHTML(b)}</div>
+    <aside class="stack">
+      <section class="panel">
+        <div class="summary-row big"><span>Grand total</span><b>${rs(c.grand)}</b></div>
+        ${b.type === 'invoice' ? `<div class="summary-row"><span>Received</span><b>${rs(rec)}</b></div><div class="summary-row"><span>Money to come</span><b style="color:${balance(b) > 0.5 ? 'var(--bad)' : 'var(--good)'}">${rs(balance(b))}</b></div>` : ''}
+        <div class="stack" style="gap:8px;margin-top:14px">
+          <button class="btn primary block" data-act="print" data-id="${b.id}">Print / Save as PDF</button>
+          ${b.type === 'invoice' && balance(b) > 0.5 ? `<button class="btn block" data-act="pay" data-id="${b.id}">Record payment received</button>` : ''}
+          ${convertBtns}
+          <a class="btn block" href="#bill/${b.id}/edit">Edit</a>
+          <button class="btn block danger" data-act="del-bill" data-id="${b.id}">Delete</button>
+        </div>
+        <p class="hint" style="font-size:12px;color:var(--muted);margin:10px 0 0">To save a PDF: click Print, then choose “Save as PDF” as the printer.</p>
+      </section>
+      ${from || kids.length ? `<section class="panel"><h3 style="margin-bottom:8px">Linked documents</h3>
+        ${from ? `<p style="margin:0 0 6px">Made from <a href="#bill/${from.id}">${esc(TYPE[from.type].label)} ${esc(from.number)}</a></p>` : ''}
+        ${kids.map(k => `<p style="margin:0 0 6px">Turned into <a href="#bill/${k.id}">${esc(typeLabel(k))} ${esc(k.number)}</a></p>`).join('')}</section>` : ''}
+      ${b.type === 'invoice' ? `<section class="panel"><h3>Payments received</h3>
+        ${(b.payments || []).length ? b.payments.map(p => `<div class="pay-item"><div><b>${rs(p.amount)}</b>${+p.tds ? ` + TDS ${rs(p.tds)}` : ''}<small>${dmy(p.date)} · ${esc(p.mode)}${p.ref ? ' · ' + esc(p.ref) : ''}</small></div><button class="btn small ghost" title="Remove payment" data-act="del-pay" data-id="${b.id}" data-p="${p.id}">✕</button></div>`).join('')
+          : `<p style="color:var(--muted);margin:8px 0 0">No payment yet.</p>`}</section>` : ''}
+    </aside>
+  </div>`;
+}
+function convertBill(id, to) {
+  const s = bill(id); if (!s) return;
+  const co = company(s.companyId);
+  const nb = clone(s);
+  Object.assign(nb, {id: uid(), type: to, date: TODAY, number: suggestNumber(co, to), payments: [], convertedFrom: s.id, createdAt: Date.now()});
+  delete nb.convertedTo;
+  if (to === 'invoice') nb.notes = '';
+  nb.terms = DB.terms[to];
+  bumpCounter(co, to, nb.number);
+  s.convertedTo = (s.convertedTo || []).concat(nb.id);
+  DB.bills.push(nb); save();
+  toast(`${typeLabel(nb)} ${nb.number} made. Put in the real dates, challans and hours.`);
+  go('#bill/' + nb.id + '/edit');
+}
+/* ---------------- CLIENTS ---------------- */
+function clientStats(id) {
+  const inv = invoices().filter(b => b.clientId === id);
+  return {count: inv.length, billed: inv.reduce((s, b) => s + calc(b).grand, 0), due: inv.reduce((s, b) => s + balance(b), 0)};
+}
+function clientForm(cl, after) {
+  openForm({title: cl ? 'Edit client' : 'Add client', fields: [
+    {id: 'name', label: 'Client / firm name', value: cl?.name, required: true, full: true},
+    {id: 'gstin', label: 'GSTIN', value: cl?.gstin, hint: 'Leave empty if they have no GST'},
+    {id: 'phone', label: 'Phone', value: cl?.phone},
+    {id: 'contact', label: 'Contact person', value: cl?.contact},
+    {id: 'address', label: 'Billing address', type: 'textarea', value: cl?.address, full: true},
+    ...(cl ? [] : [{id: 'site', label: 'First site name', placeholder: 'e.g. Tathawade Pune', full: true, hint: 'You can add more sites later'}]),
+  ], onSubmit: v => {
+    if (v.gstin && !/^\d{2}[A-Z0-9]{13}$/i.test(v.gstin)) return 'GSTIN should be 15 characters, starting with 2 digits (e.g. 27ABCDE1234F1Z5).';
+    if (DB.clients.some(c => c.id !== cl?.id && c.name.toLowerCase() === v.name.toLowerCase())) return 'A client with this name already exists.';
+    const data = {name: v.name, gstin: v.gstin.toUpperCase(), phone: v.phone, contact: v.contact, address: v.address};
+    let target = cl;
+    if (cl) Object.assign(cl, data);
+    else { target = {id: uid(), ...data, sites: v.site ? [{id: uid(), name: v.site}] : []}; DB.clients.push(target); }
+    save(); toast(`${v.name} saved`); after ? after(target) : router();
+  }});
+}
+function renderClients() {
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Clients &amp; Sites</h1><p>${DB.clients.length} clients</p></div><div class="actions"><button class="btn primary" data-act="add-client">+ Add client</button></div></div>
+  <section class="panel">${DB.clients.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Client</th><th>Sites</th><th class="r">Bills</th><th class="r">Billed</th><th class="r">Pending</th></tr></thead><tbody>
+  ${DB.clients.map(c => { const s = clientStats(c.id); return `<tr class="click" data-href="#client/${c.id}"><td><b>${esc(c.name)}</b><span class="sub">${esc(c.gstin || 'No GST')}${c.phone ? ' · ' + esc(c.phone) : ''}</span></td>
+    <td>${c.sites.map(x => esc(x.name)).join(', ') || '—'}</td><td class="r">${s.count}</td><td class="r">${rs(s.billed)}</td><td class="r">${s.due > 0.5 ? `<b style="color:var(--bad)">${rs(s.due)}</b>` : '—'}</td></tr>`; }).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>No clients yet</b>Add your first client to start billing.</div>`}</section>`;
+}
+const pageView = {};
+const billRows = bs => bs.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${bs.map(b => `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(b.number)}</b><span class="sub">${dmy(b.date)} · ${esc(b.lines.map(l => l.description).join(', '))}</span></td><td class="r"><b>${rs(calc(b).grand)}</b>${balance(b) > 0.5 && received(b) > 0 ? `<span class="sub">to come ${rs(balance(b))}</span>` : ''}</td><td class="r">${chip(billStatus(b))}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty"><b>Nothing here</b></div>`;
+function renderClient(id) {
+  const c = client(id); if (!c) return notFound();
+  const inv = invoices().filter(b => b.clientId === id).sort((a, b) => b.date.localeCompare(a.date));
+  const billed = inv.reduce((s, b) => s + calc(b).grand, 0), rec = inv.reduce((s, b) => s + received(b), 0), pend = inv.reduce((s, b) => s + balance(b), 0);
+  const pays = inv.flatMap(b => (b.payments || []).map(p => ({p, b}))).sort((a, b) => b.p.date.localeCompare(a.p.date));
+  const quotes = DB.bills.filter(b => b.clientId === id && b.type !== 'invoice').sort((a, b) => b.date.localeCompare(a.date));
+  const v = pageView['c' + id] || (pend > 0.5 ? 'pending' : 'all');
+  const title = {all: 'All bills', paid: 'Money received', pending: 'Bills not paid', quotes: 'Quotations & proforma'}[v];
+  main.innerHTML = `
+  <a class="crumb" href="#clients">← All clients</a>
+  <div class="page-head"><div><h1>${esc(c.name)}</h1><p>${esc(c.sites.map(s => s.name).join(' · ') || 'No sites')}</p></div>
+    <div class="actions"><button class="btn" data-act="edit-client" data-id="${c.id}">Edit</button><button class="btn danger" data-act="del-client" data-id="${c.id}">Delete</button>${pend > 0.5 ? `<button class="btn" data-act="receive" data-id="${c.id}">₹ Money received</button>` : ''}<a class="btn primary" href="#bill/new/invoice" data-preset-client="${c.id}">+ New bill</a></div></div>
+  ${eq([
+    {label: 'Billed', value: rs(billed), sub: `${pl(inv.length, 'bill', 'bills')}`, act: 'view', val: 'all', on: v === 'all'}, '−',
+    {label: 'Received', value: rs(rec), tone: 'good', sub: `${pl(pays.length, 'payment', 'payments')}`, act: 'view', val: 'paid', on: v === 'paid'}, '=',
+    {label: 'Money to come', value: rs(pend), tone: pend > 0.5 ? 'bad' : 'good', sub: `${pl(inv.filter(b => balance(b) > 0.5).length, 'bill', 'bills')}`, act: 'view', val: 'pending', on: v === 'pending'},
+    ...(quotes.length ? ['|', {label: 'Quotations', value: quotes.length, act: 'view', val: 'quotes', on: v === 'quotes'}] : []),
+  ], 'c' + id)}
+  <div class="grid-side">
+    <section class="panel"><div class="panel-head"><h2>${title}</h2></div>
+      ${v === 'paid' ? (pays.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${pays.map(({p, b}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${dmy(p.date)}</b><span class="sub">for bill ${esc(b.number)}</span></td><td>${esc(p.mode)}</td><td class="r"><b class="t-good">${rs((+p.amount || 0) + (+p.tds || 0))}</b>${+p.tds ? `<span class="sub">incl. TDS ${rs(p.tds)}</span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty"><b>No money received yet</b></div>`)
+        : billRows(v === 'pending' ? inv.filter(b => balance(b) > 0.5) : v === 'quotes' ? quotes : inv)}
+    </section>
+    <aside class="stack">
+      <section class="panel"><h3 style="margin-bottom:10px">Contact</h3>
+        ${c.phone ? `<p class="big-phone">${esc(c.phone)}</p>` : ''}<dl class="kv"><dt>Person</dt><dd>${esc(c.contact || '—')}</dd><dt>GSTIN</dt><dd>${esc(c.gstin || '—')}</dd><dt>Address</dt><dd>${esc(c.address || '—')}</dd></dl></section>
+      <section class="panel"><h3 style="margin-bottom:6px">Sites</h3>
+        ${c.sites.map(x => `<div class="pay-item"><span>${esc(x.name)}</span><button class="btn small ghost" title="Remove site" data-act="del-site" data-id="${c.id}" data-s="${x.id}">✕</button></div>`).join('') || '<p style="color:var(--muted)">No sites yet.</p>'}
+        <form id="site-form" style="display:flex;gap:8px;margin-top:10px"><input class="input" id="site-name" placeholder="New site name" aria-label="New site name"><button class="btn">Add</button></form>
+      </section>
+    </aside>
+  </div>`;
+  $('#site-form').addEventListener('submit', e => {
+    e.preventDefault(); const n = $('#site-name').value.trim(); if (!n) return;
+    c.sites.push({id: uid(), name: n}); save(); toast('Site added'); renderClient(id);
+  });
+}
+
+/* ---------------- VEHICLES ---------------- */
+function vehicleForm(v) {
+  openForm({title: v ? 'Edit vehicle' : 'Add vehicle', fields: [
+    {id: 'name', label: 'Machine / model', value: v?.name, required: true, placeholder: 'e.g. Pocland Ex70, JCB 3DX, Hyva'},
+    {id: 'regNo', label: 'Number plate', value: v?.regNo, placeholder: 'MH 14 KA 2798', hint: 'Leave empty if not registered'},
+    {id: 'type', label: 'Type', type: 'select', options: ['Excavator', 'Backhoe loader', 'Tipper', 'Roller', 'Loader', 'Tractor', 'Other'], value: v?.type || 'Excavator'},
+    {id: 'companyId', label: 'Bills under', type: 'select', options: DB.companies.map(c => [c.id, c.short]), value: v?.companyId || 'rke'},
+    {id: 'unit', label: 'Charged per', type: 'select', options: ['Hour', 'Day', 'Trip', 'Brass', 'Month'], value: v?.unit || 'Hour'},
+    {id: 'rate', label: 'Normal rate (₹)', type: 'number', value: v?.rate, required: true},
+    {id: 'attachment', label: 'Attachment', value: v?.attachment, placeholder: 'Bucket'},
+    {id: 'operatorId', label: 'Operator / driver', type: 'select', options: [['', '— None —'], ...DB.employees.map(e => [e.id, e.name + ' (' + e.role + ')'])], value: v?.operatorId || ''},
+    {id: 'status', label: 'Right now', type: 'select', options: ['On site', 'Idle', 'Under repair'], value: v?.status || 'Idle'},
+    {id: 'site', label: 'Working at', value: v?.site, placeholder: 'Client – site'},
+  ], onSubmit: x => {
+    if (!(+x.rate > 0)) return 'Rate must be more than 0.';
+    const data = {...x, rate: +x.rate, regNo: x.regNo.toUpperCase(), site: x.status === 'On site' ? x.site : ''};
+    if (v) Object.assign(v, data); else DB.vehicles.push({id: uid(), ...data});
+    save(); toast(`${vehicleLabel(data)} saved`); router();
+  }});
+}
+function vehicleUse(vid) {
+  const rows = [];
+  invoices().forEach(b => b.lines.forEach(l => { if (l.vehicleId === vid) rows.push({b, qty: lineQty(l), amt: lineAmt(l)}); }));
+  return rows;
+}
+function renderVehicles() {
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Vehicles</h1><p>${DB.vehicles.length} machines · ${DB.vehicles.filter(v => v.status === 'On site').length} working today</p></div>
+    <div class="actions"><button class="btn" data-act="csv-vehicles">Download for Excel</button><button class="btn primary" data-act="add-vehicle">+ Add vehicle</button></div></div>
+  <section class="panel">${DB.vehicles.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Vehicle</th><th>Rate</th><th>Right now</th><th>Operator</th><th class="r">Billed this year</th></tr></thead><tbody>
+  ${DB.vehicles.map(v => { const u = vehicleUse(v.id).filter(x => fyOf(x.b.date) === CUR_FY); const q = u.reduce((s, x) => s + x.qty, 0), a = u.reduce((s, x) => s + x.amt, 0);
+    return `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.type)} · ${esc(company(v.companyId)?.short)}</span></td>
+    <td>${rs(v.rate)} / ${v.unit.toLowerCase()}</td><td>${chip([v.status, v.status === 'On site' ? 'good' : v.status === 'Under repair' ? 'bad' : ''])}${v.site ? `<span class="sub">${esc(v.site)}</span>` : ''}</td>
+    <td>${esc(employee(v.operatorId)?.name || '—')}</td><td class="r"><b>${rs(a)}</b><span class="sub">${qtyFmt(q)} ${v.unit === 'Hour' ? 'hrs' : v.unit.toLowerCase() + 's'}</span></td></tr>`; }).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>No vehicles yet</b>Add your first machine.</div>`}</section>`;
+}
+function renderVehicle(id) {
+  const v = vehicle(id); if (!v) return notFound();
+  const use = vehicleUse(id).sort((a, b) => b.b.date.localeCompare(a.b.date));
+  const q = r2(use.reduce((s, x) => s + x.qty, 0)), a = use.reduce((s, x) => s + x.amt, 0);
+  const u = unitWord(v.unit);
+  const days = use.flatMap(({b}) => b.lines.filter(l => l.vehicleId === id).flatMap(l => l.entries.filter(e => parseQty(e.qty) > 0).map(e => ({e, b}))))
+    .sort((x, y) => (y.e.date || y.b.date).localeCompare(x.e.date || x.b.date));
+  const op = employee(v.operatorId);
+  const view = pageView['v' + id] || 'bills';
+  const title = {bills: 'Bills with this vehicle', days: 'Work, day by day', avg: 'Earning per ' + v.unit.toLowerCase() + ', bill by bill'}[view];
+  let body;
+  if (view === 'days') body = days.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Challan</th><th>Client</th><th class="r">${v.unit === 'Hour' ? 'Hours' : v.unit + 's'}</th></tr></thead><tbody>
+    ${days.map(({e, b}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${dmy(e.date) || '—'}</b></td><td>${esc(e.challan || '—')}</td><td>${esc(client(b.clientId)?.name)}<span class="sub">bill ${esc(b.number)}</span></td><td class="r"><b>${qtyFmt(parseQty(e.qty))}</b></td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${qtyFmt(q)} ${u}</td></tr></tfoot></table></div>` : `<div class="empty"><b>No work recorded</b></div>`;
+  else if (view === 'avg') body = use.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill</th><th class="r">Earned</th><th class="r">Work</th><th class="r">Per ${v.unit.toLowerCase()}</th></tr></thead><tbody>
+    ${use.map(({b, qty, amt}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(b.number)}</b><span class="sub">${esc(client(b.clientId)?.name)}</span></td><td class="r">${rs(amt)}</td><td class="r">÷ ${qtyFmt(qty)} ${u}</td><td class="r"><b>${qty ? rs(amt / qty) : '—'}</b></td></tr>`).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="r">${rs(a)}</td><td class="r">÷ ${qtyFmt(q)} ${u}</td><td class="r">${q ? rs(a / q) : '—'}</td></tr></tfoot></table></div>` : `<div class="empty"><b>Not billed yet</b></div>`;
+  else body = use.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${use.map(({b, qty, amt}) => { const cl = client(b.clientId); return `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(cl?.name)}</b><span class="sub">${esc(b.number)} · ${dmy(b.date)}</span></td><td class="r">${qtyFmt(qty)} ${u}</td><td class="r"><b>${rs(amt)}</b></td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty"><b>Not billed yet</b></div>`;
+  main.innerHTML = `
+  <a class="crumb" href="#vehicles">← All vehicles</a>
+  <div class="page-head"><div><h1>${esc(vehicleLabel(v))}</h1><p>${esc(v.type)} · ${rs(v.rate)} per ${v.unit.toLowerCase()} · ${esc(company(v.companyId)?.short)} &nbsp;${statusChip(v.status)}</p></div>
+    <div class="actions"><button class="btn" data-act="edit-vehicle" data-id="${v.id}">Edit</button><button class="btn danger" data-act="del-vehicle" data-id="${v.id}">Delete</button></div></div>
+  ${eq([
+    {label: 'Earned', value: rs(a), tone: 'good', sub: `${pl(use.length, 'bill', 'bills')}`, act: 'view', val: 'bills', on: view === 'bills'}, '÷',
+    {label: 'Work done', value: `${qtyFmt(q)} ${u}`, sub: `${pl(days.length, 'entry', 'entries')}`, act: 'view', val: 'days', on: view === 'days'}, '=',
+    {label: 'Earned per ' + v.unit.toLowerCase(), value: q ? rs(a / q) : '—', sub: `normal rate ${rs(v.rate)}`, act: 'view', val: 'avg', on: view === 'avg'},
+  ], 'v' + id)}
+  <div class="grid-side">
+    <section class="panel"><div class="panel-head"><h2>${title}</h2></div>${body}</section>
+    <aside class="stack"><section class="panel"><h3 style="margin-bottom:10px">Now</h3><dl class="kv"><dt>Status</dt><dd>${statusChip(v.status)}</dd><dt>Site</dt><dd>${esc(v.site || '—')}</dd><dt>Operator</dt><dd>${op ? `<a href="#staff/${op.id}">${esc(op.name)}</a>${op.phone ? `<br><span class="big-phone" style="font-size:1rem">${esc(op.phone)}</span>` : ''}` : '—'}</dd></dl></section></aside>
+  </div>`;
+}
+
+/* ---------------- EMPLOYEES ---------------- */
+function employeeForm(e) {
+  openForm({title: e ? 'Edit employee' : 'Add employee', fields: [
+    {id: 'name', label: 'Full name', value: e?.name, required: true},
+    {id: 'role', label: 'Work', type: 'select', options: ['Operator', 'Driver', 'Helper', 'Supervisor', 'Mechanic', 'Office'], value: e?.role || 'Operator'},
+    {id: 'phone', label: 'Phone', value: e?.phone},
+    {id: 'vehicleId', label: 'Vehicle', type: 'select', options: [['', '— None —'], ...DB.vehicles.map(v => [v.id, vehicleLabel(v)])], value: e?.vehicleId || ''},
+    {id: 'salary', label: 'Monthly salary (₹)', type: 'number', value: e?.salary, required: true},
+    {id: 'allowance', label: 'Daily allowance / bhatta (₹ per day)', type: 'number', value: e?.allowance ?? 0},
+    {id: 'joined', label: 'Joined on', type: 'date', value: e?.joined || TODAY},
+  ], onSubmit: x => {
+    if (!(+x.salary > 0)) return 'Monthly salary must be more than 0.';
+    const data = {...x, salary: +x.salary, allowance: +x.allowance || 0};
+    if (e) Object.assign(e, data); else DB.employees.push({id: uid(), ...data, advances: [], salaries: []});
+    save(); toast(`${x.name} saved`); router();
+  }});
+}
+/* ---------------- QUICK FORMS (work the same on phone and PC) ---------------- */
+const radioSeg = (name, opts, val) => `<div class="rseg" role="radiogroup">${opts.map(o => `<label><input type="radio" name="${name}" value="${esc(o)}" ${o === val ? 'checked' : ''}><span>${esc(o)}</span></label>`).join('')}</div>`;
+const radioVal = name => ($(`input[name="${name}"]:checked`) || {}).value || '';
+const dateChips = id => `<div class="dchips"><button type="button" class="dchip" data-date-for="${id}" data-date="${TODAY}">Today</button><button type="button" class="dchip" data-date-for="${id}" data-date="${addDays(TODAY, -1)}">Yesterday</button></div>`;
+const initials = n => n.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+function personCard(e) {
+  const last = [...e.advances].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const due = Math.max(0, advanceDue(e));
+  return `<div class="who"><div class="who-av">${esc(initials(e.name))}</div>
+    <div class="who-main"><b>${esc(e.name)}</b><span>${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || 'no vehicle')}</span><span>${rs(e.salary)}/month + ${rs(e.allowance)}/day bhatta</span></div>
+    <div class="who-r"><span>Advance pending</span><b class="${due ? 't-bad' : 't-good'}">${rs(due)}</b>${last ? `<small>last ${rs(last.amount)} on ${dmy(last.date)}</small>` : ''}</div></div>`;
+}
+const modalFoot = label => `<div class="modal-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">${label}</button></div>`;
+const showErr = (id, msg) => { $(id).innerHTML = `<div class="errors" style="margin-bottom:14px">${esc(msg)}</div>`; $(id).scrollIntoView({block: 'nearest'}); };
+
+function giveAdvanceForm(pre) {
+  if (!DB.employees.length) { toast('Add an employee first'); return go('#staff'); }
+  openModal(`<h2>Give advance</h2><form id="aform" novalidate><div id="aerr"></div>
+    <div class="form-grid">
+      <div class="field full"><label for="a_emp">Who is taking the advance?</label><select class="input" id="a_emp"><option value="">Choose person…</option>
+        ${DB.employees.map(x => `<option value="${x.id}" ${pre && pre.id === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.role)}${advanceDue(x) > 0 ? ' · ' + rs(advanceDue(x)) + ' pending' : ''}</option>`).join('')}</select></div>
+      <div class="full" id="a_card"></div>
+      <div class="field"><label for="a_amt">Amount (₹)</label><input class="input big" id="a_amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+      <div class="field"><label for="a_date">Date</label><input class="input" id="a_date" type="date" value="${TODAY}">${dateChips('a_date')}</div>
+      <div class="field full"><span class="field-label">Given by</span>${radioSeg('a_mode', ['Cash', 'UPI', 'Bank transfer'], 'Cash')}</div>
+      <div class="field full"><label for="a_note">Reason (optional)</label><input class="input" id="a_note" placeholder="Family function, medical, room rent…"></div>
+    </div>
+    <div id="a_sum"></div>${modalFoot('Save advance')}</form>`, true);
+  const upd = () => {
+    const e = employee($('#a_emp').value), amt = +$('#a_amt').value || 0;
+    $('#a_card').innerHTML = e ? personCard(e) : '';
+    const due = e ? Math.max(0, advanceDue(e)) : 0;
+    $('#a_sum').innerHTML = e ? eq([{label: 'Pending now', value: rs(due)}, '+', {label: 'This advance', value: rs(amt), tone: 'warn'}, '=', {label: 'To recover', value: rs(due + amt), tone: 'bad'}]) : '';
+  };
+  upd();
+  $('#aform').addEventListener('input', upd);
+  if (pre) $('#a_amt').focus();
+  $('#aform').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const e = employee($('#a_emp').value), amt = +$('#a_amt').value || 0;
+    if (!e) return showErr('#aerr', 'Choose who is taking the advance.');
+    if (!(amt > 0)) return showErr('#aerr', 'Enter the amount.');
+    if (!$('#a_date').value) return showErr('#aerr', 'Choose the date.');
+    e.advances.push({id: uid(), date: $('#a_date').value, amount: amt, note: $('#a_note').value.trim(), mode: radioVal('a_mode')});
+    save(); closeModal(); toast(`Advance ${rs(amt)} given to ${e.name}`); router();
+  });
+}
+
+function receiveMoneyForm(cid, bid) {
+  const owing = DB.clients.map(c => ({c, bills: invoices().filter(b => b.clientId === c.id && balance(b) > 0.5).sort((a, b) => a.date.localeCompare(b.date))}))
+    .filter(x => x.bills.length).sort((a, b) => a.c.name.localeCompare(b.c.name));
+  if (!owing.length) { toast('Nobody owes money right now'); return; }
+  openModal(`<h2>Money received</h2><form id="rform" novalidate><div id="rerr"></div>
+    <div class="form-grid">
+      <div class="field full"><label for="r_cl">From which client?</label><select class="input" id="r_cl"><option value="">Choose client…</option>
+        ${owing.map(x => `<option value="${x.c.id}" ${x.c.id === cid ? 'selected' : ''}>${esc(x.c.name)} · ${rs(x.bills.reduce((s, b) => s + balance(b), 0))} to come</option>`).join('')}</select></div>
+      <div class="full" id="r_bills"></div>
+      <div class="field"><label for="r_amt">Amount received (₹)</label><input class="input big" id="r_amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+      <div class="field"><label for="r_tds">TDS cut by client (₹)</label><input class="input" id="r_tds" type="number" inputmode="decimal" min="0" step="any" value="0"><div class="dchips" id="r_tdschip"></div></div>
+      <div class="field"><label for="r_date">Date received</label><input class="input" id="r_date" type="date" value="${TODAY}">${dateChips('r_date')}</div>
+      <div class="field"><label for="r_ref">Cheque / UTR no. (optional)</label><input class="input" id="r_ref"></div>
+      <div class="field full"><span class="field-label">Paid by</span>${radioSeg('r_mode', ['NEFT / RTGS', 'UPI', 'Cheque', 'Cash'], 'NEFT / RTGS')}</div>
+    </div>
+    <div id="r_sum"></div>${modalFoot('Save payment')}</form>`, true);
+  let amtTouched = false, lastBill = null;
+  const drawBills = () => {
+    const x = owing.find(o => o.c.id === $('#r_cl').value);
+    if (!x) { $('#r_bills').innerHTML = ''; return; }
+    const pick = x.bills.some(b => b.id === bid) ? bid : x.bills[0].id;
+    $('#r_bills').innerHTML = `<span class="field-label">Against which bill?</span>${x.bills.map(b => `<label class="billpick"><input type="radio" name="r_bill" value="${b.id}" ${b.id === pick ? 'checked' : ''}>
+      <span class="bp-main"><b>${esc(b.number)}</b><span>${esc(company(b.companyId).short)} · ${dmy(b.date)} · ${esc(b.lines.map(l => l.description).join(', '))}</span></span>
+      <span class="bp-r"><b class="t-bad">${rs(balance(b))}</b><small>${daysBetween(b.date, TODAY)} days</small></span></label>`).join('')}`;
+  };
+  const upd = () => {
+    const b = bill(radioVal('r_bill'));
+    if (b && b.id !== lastBill) { lastBill = b.id; if (!amtTouched) $('#r_amt').value = r2(balance(b)); }
+    const amt = +$('#r_amt').value || 0, tds = +$('#r_tds').value || 0;
+    const tdsSuggest = b && company(b.companyId).gst ? r2(calc(b).taxable * 0.02) : 0;
+    $('#r_tdschip').innerHTML = tdsSuggest && !received(b) ? `<button type="button" class="dchip" data-tds="${tdsSuggest}">2% TDS = ${rs(tdsSuggest)}</button>` : '';
+    if (!b) { $('#r_sum').innerHTML = ''; return; }
+    const left = r2(balance(b) - amt - tds);
+    $('#r_sum').innerHTML = eq([{label: 'To come on bill', value: rs(balance(b))}, '−', {label: 'Received now', value: rs(amt + tds), tone: 'good'}, '=', {label: 'Still to come', value: rs(Math.max(0, left)), tone: left > 0.5 ? 'bad' : 'good'}]);
+  };
+  drawBills(); upd();
+  $('#r_cl').addEventListener('change', () => { bid = null; amtTouched = false; lastBill = null; drawBills(); upd(); });
+  $('#rform').addEventListener('input', ev => { if (ev.target.id === 'r_amt') amtTouched = true; upd(); });
+  $('#rform').addEventListener('change', ev => { if (ev.target.name === 'r_bill') { amtTouched = false; upd(); } });
+  $('#rform').addEventListener('click', ev => {
+    const t = ev.target.closest('[data-tds]'); if (!t) return;
+    const b = bill(radioVal('r_bill')); $('#r_tds').value = t.dataset.tds;
+    if (!amtTouched && b) $('#r_amt').value = r2(balance(b) - +t.dataset.tds);
+    upd();
+  });
+  if (cid) $('#r_amt').focus();
+  $('#rform').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const b = bill(radioVal('r_bill')), amt = +$('#r_amt').value || 0, tds = +$('#r_tds').value || 0;
+    if (!b) return showErr('#rerr', 'Choose the client and the bill.');
+    if (!(amt > 0)) return showErr('#rerr', 'Enter the amount received.');
+    if (amt + tds > balance(b) + 1) return showErr('#rerr', `Only ${rs(balance(b))} is to come on this bill.`);
+    if (!$('#r_date').value) return showErr('#rerr', 'Choose the date.');
+    b.payments = b.payments || [];
+    b.payments.push({id: uid(), date: $('#r_date').value, amount: amt, tds, mode: radioVal('r_mode'), ref: $('#r_ref').value.trim()});
+    save(); closeModal(); toast(`${rs(amt)} received from ${client(b.clientId).name}`); router();
+  });
+}
+
+function salaryForm(e) {
+  if (!DB.employees.length) { toast('Add an employee first'); return go('#staff'); }
+  const due = e ? Math.max(0, advanceDue(e)) : 0;
+  const month = e && e.salaries.some(p => p.month === PREV_MONTH) ? THIS_MONTH : PREV_MONTH;
+  openModal(`<h2>Pay salary</h2><form id="sform" novalidate><div id="serr"></div>
+    <div class="form-grid">
+      <div class="field full"><label for="s_emp">Pay to</label><select class="input" id="s_emp"><option value="">Choose person…</option>
+        ${DB.employees.map(x => `<option value="${x.id}" ${e && e.id === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.role)}${x.salaries.some(p => p.month === PREV_MONTH) ? ' · ' + monthName(PREV_MONTH) + ' paid' : ''}</option>`).join('')}</select></div>
+      ${e ? `<div class="full">${personCard(e)}</div>
+      <div class="field"><label for="s_month">Salary for month</label><input class="input" id="s_month" type="month" value="${month}"></div>
+      <div class="field"><label for="s_days">Days worked</label><input class="input" id="s_days" type="number" inputmode="decimal" min="0" step="0.5" value="${daysInMonth(month)}"><span class="hint" id="s_dim"></span></div>
+      <div class="field"><label for="s_cut">Cut from advance (₹)</label><input class="input" id="s_cut" type="number" inputmode="decimal" min="0" step="any" value="${Math.min(due, Math.round(e.salary * 0.5))}"><span class="hint">Pending: ${rs(due)}</span></div>
+      <div class="field"><label for="s_paid">Paid on</label><input class="input" id="s_paid" type="date" value="${TODAY}">${dateChips('s_paid')}</div>
+      <div class="field full"><span class="field-label">Paid by</span>${radioSeg('s_mode', ['Cash', 'UPI', 'Bank transfer'], 'Cash')}</div>` : ''}
+    </div>
+    <div id="s_calc"></div>${e ? modalFoot('Save salary') : ''}</form>`, true);
+  $('#s_emp').addEventListener('change', ev => salaryForm(employee(ev.target.value)));
+  if (!e) return;
+  const calcS = () => {
+    const m = $('#s_month').value || month, dim = daysInMonth(m), days = Math.min(+$('#s_days').value || 0, dim);
+    const earned = Math.round(e.salary * days / dim), allow = Math.round(days * e.allowance), cut = Math.min(+$('#s_cut').value || 0, due);
+    $('#s_dim').textContent = `${dim} days in ${monthName(m)}`;
+    $('#s_calc').innerHTML = (e.salaries.some(p => p.month === m) ? `<div class="errors" style="margin-top:14px">${monthName(m)} salary is already paid to ${esc(e.name)}.</div>` : '')
+      + eq([{label: `Salary · ${days} days`, value: rs(earned)}, '+', {label: 'Bhatta', value: rs(allow)}, '−', {label: 'Advance cut', value: rs(cut)}, '=', {label: 'Pay in hand', value: rs(earned + allow - cut), tone: 'good'}]);
+    return {m, days, earned, allow, cut, net: earned + allow - cut};
+  };
+  calcS();
+  $('#sform').addEventListener('input', ev => { if (ev.target.id !== 's_emp') calcS(); });
+  $('#sform').addEventListener('submit', ev => {
+    ev.preventDefault(); const r = calcS();
+    const err = !r.m ? 'Choose the month.' : e.salaries.some(p => p.month === r.m) ? `${monthName(r.m)} salary is already paid. Delete that entry on ${e.name}'s page to redo it.` : (+$('#s_cut').value || 0) > due + 0.5 ? `Advance pending is only ${rs(due)}.` : r.net < 0 ? 'Advance cut is more than the salary.' : !(r.days > 0) ? 'Enter days worked.' : '';
+    if (err) return showErr('#serr', err);
+    e.salaries.push({id: uid(), month: r.m, days: r.days, earned: r.earned, allowanceAmt: r.allow, cut: r.cut, net: r.net, paidOn: $('#s_paid').value, mode: radioVal('s_mode')});
+    save(); closeModal(); toast(`${monthName(r.m)} salary ${rs(r.net)} paid to ${e.name}`); router();
+  });
+}
+
+/* ---------------- PAYMENTS ---------------- */
+function renderPayments() {
+  const rows = paymentsIn(payPeriod).sort((a, b) => b.p.date.localeCompare(a.p.date));
+  const amt = rows.reduce((s, x) => s + (+x.p.amount || 0), 0), tds = rows.reduce((s, x) => s + (+x.p.tds || 0), 0);
+  const seg = (v, l) => `<button data-act="pay-period" data-val="${v}" class="${payPeriod === v ? 'on' : ''}">${l}</button>`;
+  main.innerHTML = `
+  <a class="crumb" href="#">← Home</a>
+  <div class="page-head"><div><h1>Money received</h1></div><div class="actions"><button class="btn" data-act="csv-payments">Excel</button></div></div>
+  <div class="toolbar"><div class="seg">${seg('fy', 'Year 20' + CUR_FY)}${seg('all', 'All years')}</div></div>
+  ${eq([{label: 'In bank / cash', value: rs(amt), tone: 'good', sub: `${pl(rows.length, 'payment', 'payments')}`}, '+', {label: 'TDS cut by client', value: rs(tds)}, '=', {label: 'Received', value: rs(amt + tds), tone: 'good'}])}
+  <section class="panel">${rows.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Client</th><th>Paid by</th><th class="r">Amount</th><th class="r">TDS</th></tr></thead><tbody>
+  ${rows.map(({p, b}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${dmy(p.date)}</b></td><td><b>${esc(client(b.clientId)?.name)}</b><span class="sub">for bill ${esc(b.number)}</span></td>
+    <td>${esc(p.mode)}${p.ref ? `<span class="sub">${esc(p.ref)}</span>` : ''}</td><td class="r"><b class="t-good">${rs(p.amount)}</b></td><td class="r">${+p.tds ? rs(p.tds) : '—'}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${rs(amt)}</td><td class="r">${rs(tds)}</td></tr></tfoot></table></div>`
+    : `<div class="empty"><b>No money received yet</b></div>`}</section>`;
+}
+
+/* ---------------- STAFF MONEY ---------------- */
+const staffTabs = on => `<div class="toolbar"><div class="seg"><a href="#staff" class="${on === 'people' ? 'on' : ''}">People</a><a href="#advances" class="${on === 'adv' ? 'on' : ''}">Advances</a><a href="#salaries/${PREV_MONTH}" class="${on === 'sal' ? 'on' : ''}">Salary sheet</a></div></div>`;
+function renderAdvances() {
+  const people = DB.employees.map(e => {
+    const given = e.advances.reduce((s, a) => s + (+a.amount || 0), 0), back = e.salaries.reduce((s, p) => s + (+p.cut || 0), 0);
+    return {e, given, back, due: Math.max(0, r2(given - back))};
+  }).filter(x => x.given > 0).sort((a, b) => b.due - a.due);
+  const T = k => people.reduce((s, x) => s + x[k], 0);
+  main.innerHTML = `
+  <a class="crumb" href="#">← Home</a>
+  <div class="page-head"><div><h1>Advances</h1></div><div class="actions"><button class="btn primary" data-act="advance">Give advance</button></div></div>
+  ${staffTabs('adv')}
+  ${eq([{label: 'Advance given', value: rs(T('given')), tone: 'warn'}, '−', {label: 'Cut from salary', value: rs(T('back'))}, '=', {label: 'Still to recover', value: rs(T('due')), tone: T('due') > 0 ? 'bad' : 'good', sub: `${pl(people.filter(x => x.due).length, 'person', 'people')}`}])}
+  <section class="panel">
+  ${people.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Given</th><th class="r">Cut from salary</th><th class="r">Still to recover</th></tr></thead><tbody>
+  ${people.map(x => `<tr class="click" data-href="#staff/${x.e.id}"><td><b>${esc(x.e.name)}</b><span class="sub">${esc(x.e.role)}</span></td><td class="r">${rs(x.given)}</td><td class="r">${x.back ? '− ' + rs(x.back) : '—'}</td><td class="r">${x.due ? `<b class="t-bad">${rs(x.due)}</b>` : chip(['Cleared', 'good'])}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td>Total</td><td class="r">${rs(T('given'))}</td><td class="r">− ${rs(T('back'))}</td><td class="r">${rs(T('due'))}</td></tr></tfoot></table></div>` : `<div class="empty"><b>No advance given</b></div>`}</section>`;
+}
+function renderSalaries(month) {
+  month = month || PREV_MONTH;
+  const months = [...new Set([THIS_MONTH, PREV_MONTH, ...DB.employees.flatMap(e => e.salaries.map(p => p.month))])].sort().reverse();
+  const rows = DB.employees.map(e => ({e, p: e.salaries.find(p => p.month === month)}));
+  const paid = rows.filter(r => r.p), T = k => paid.reduce((s, r) => s + (+r.p[k] || 0), 0);
+  main.innerHTML = `
+  <a class="crumb" href="#">← Home</a>
+  <div class="page-head"><div><h1>Salary sheet</h1></div><div class="actions"><button class="btn primary" data-act="salary">Pay salary</button></div></div>
+  ${staffTabs('sal')}
+  <div class="toolbar"><select class="input" id="sal-month" style="max-width:220px" aria-label="Month">${months.map(m => `<option value="${m}" ${m === month ? 'selected' : ''}>${monthName(m)}</option>`).join('')}</select>
+    <span class="chip ${paid.length === rows.length ? 'good' : 'warn'}">${paid.length} of ${rows.length} paid</span></div>
+  ${eq([{label: 'Salary', value: rs(T('earned'))}, '+', {label: 'Bhatta', value: rs(T('allowanceAmt'))}, '−', {label: 'Advance cut', value: rs(T('cut'))}, '=', {label: 'Paid in hand', value: rs(T('net')), tone: 'good'}])}
+  <section class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Days</th><th class="r">Salary</th><th class="r">Bhatta</th><th class="r">Advance cut</th><th class="r">Paid in hand</th></tr></thead><tbody>
+  ${rows.map(({e, p}) => p ? `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">paid ${dmy(p.paidOn)} · ${esc(p.mode)}</span></td><td class="r">${p.days}</td><td class="r">${rs(p.earned)}</td><td class="r">+ ${rs(p.allowanceAmt)}</td><td class="r">${+p.cut ? '− ' + rs(p.cut) : '—'}</td><td class="r"><b class="t-good">${rs(p.net)}</b></td></tr>`
+    : `<tr><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}</span></td><td colspan="4" class="r">${chip(['Not paid', 'warn'])}</td><td class="r"><button class="btn small primary" data-act="salary-one" data-id="${e.id}">Pay now</button></td></tr>`).join('')}
+  </tbody><tfoot><tr><td>Total</td><td></td><td class="r">${rs(T('earned'))}</td><td class="r">+ ${rs(T('allowanceAmt'))}</td><td class="r">${T('cut') ? '− ' + rs(T('cut')) : '—'}</td><td class="r">${rs(T('net'))}</td></tr></tfoot></table></div></section>`;
+  $('#sal-month').addEventListener('change', ev => go('#salaries/' + ev.target.value));
+}
+function renderStaff() {
+  const totalSal = DB.employees.reduce((s, e) => s + e.salary, 0);
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Employees</h1><p>${pl(DB.employees.length, 'person', 'people')} · monthly salary bill ${rs(totalSal)}</p></div>
+    <div class="actions"><button class="btn" data-act="csv-staff">Download for Excel</button><button class="btn" data-act="advance">Give advance</button><button class="btn" data-act="salary">Pay salary</button><button class="btn primary" data-act="add-emp">+ Add employee</button></div></div>
+  ${staffTabs('people')}
+  <section class="panel">${DB.employees.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Vehicle</th><th class="r">Monthly salary</th><th class="r">Bhatta / day</th><th class="r">Advance pending</th><th>Last salary</th></tr></thead><tbody>
+  ${DB.employees.map(e => { const last = [...e.salaries].sort((a, b) => b.month.localeCompare(a.month))[0]; const ad = advanceDue(e);
+    return `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}${e.phone ? ' · ' + esc(e.phone) : ''}</span></td>
+    <td>${esc(vehicleLabel(vehicle(e.vehicleId)) || '—')}</td><td class="r">${rs(e.salary)}</td><td class="r">${rs(e.allowance)}</td>
+    <td class="r">${ad > 0 ? `<b style="color:var(--warn)">${rs(ad)}</b>` : '—'}</td><td>${last ? `${monthName(last.month)} <span class="sub">${rs(last.net)} on ${dmy(last.paidOn)}</span>` : chip(['Not paid yet', 'warn'])}</td></tr>`; }).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>No employees yet</b>Add operators, drivers and helpers.</div>`}</section>`;
+}
+function renderEmployee(id) {
+  const e = employee(id); if (!e) return notFound();
+  const given = e.advances.reduce((s, a) => s + (+a.amount || 0), 0), cut = e.salaries.reduce((s, p) => s + (+p.cut || 0), 0), due = Math.max(0, advanceDue(e));
+  const paidYear = e.salaries.filter(p => fyOf(p.month + '-01') === CUR_FY).reduce((s, p) => s + p.net, 0);
+  const view = pageView['e' + id] || 'all';
+  const all = [...e.advances.map(a => ({date: a.date, kind: 'adv', a})), ...e.salaries.map(p => ({date: p.paidOn || p.month + '-28', kind: 'sal', p}))].sort((x, y) => y.date.localeCompare(x.date));
+  const ledger = all.filter(x => view === 'all' || (view === 'adv' ? x.kind === 'adv' : view === 'cut' ? x.kind === 'sal' && +x.p.cut : x.kind === 'sal'));
+  const title = {all: 'Everything', adv: 'Advances given', cut: 'Advance cut from salary', sal: 'Salary paid'}[view];
+  main.innerHTML = `
+  <a class="crumb" href="#staff">← All staff</a>
+  <div class="page-head"><div><h1>${esc(e.name)}</h1><p>${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || 'no vehicle')} · ${rs(e.salary)}/month + ${rs(e.allowance)}/day bhatta${e.phone ? ' · ' + esc(e.phone) : ''}</p></div>
+    <div class="actions"><button class="btn" data-act="edit-emp" data-id="${e.id}">Edit</button><button class="btn danger" data-act="del-emp" data-id="${e.id}">Delete</button><button class="btn" data-act="advance-one" data-id="${e.id}">Give advance</button><button class="btn primary" data-act="salary-one" data-id="${e.id}">Pay salary</button></div></div>
+  ${eq([
+    {label: 'Advance given', value: rs(given), tone: 'warn', sub: `${pl(e.advances.length, 'time', 'times')}`, act: 'view', val: 'adv', on: view === 'adv'}, '−',
+    {label: 'Cut from salary', value: rs(cut), act: 'view', val: 'cut', on: view === 'cut'}, '=',
+    {label: 'Still to recover', value: rs(due), tone: due > 0 ? 'bad' : 'good', act: 'view', val: 'adv', on: false},
+    '|', {label: 'Salary paid this year', value: rs(paidYear), tone: 'good', sub: `${pl(e.salaries.filter(p => fyOf(p.month + '-01') === CUR_FY).length, 'month', 'months')}`, act: 'view', val: 'sal', on: view === 'sal'},
+  ], 'e' + id)}
+  <section class="panel"><div class="panel-head"><h2>${title}</h2>${view !== 'all' ? `<button class="btn small" data-act="view" data-val="all" data-id="e${id}">Show everything</button>` : ''}</div>
+  ${ledger.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>
+  ${ledger.map(x => x.kind === 'adv'
+    ? `<tr><td><b>${dmy(x.a.date)}</b></td><td>${chip(['Advance', 'warn'])}<span class="sub">${esc(x.a.note || '')}</span></td><td class="r"><b class="t-warn">${rs(x.a.amount)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-adv" data-id="${e.id}" data-x="${x.a.id}">✕</button></td></tr>`
+    : `<tr><td><b>${dmy(x.p.paidOn)}</b></td><td>${chip([monthName(x.p.month) + ' salary', 'good'])}<span class="sub">${rs(x.p.earned)} + bhatta ${rs(x.p.allowanceAmt)}${+x.p.cut ? ' − advance ' + rs(x.p.cut) : ''}</span></td><td class="r"><b class="t-good">${rs(x.p.net)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-sal" data-id="${e.id}" data-x="${x.p.id}">✕</button></td></tr>`).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>Nothing here yet</b></div>`}</section>`;
+}
+
+/* ---------------- SETTINGS ---------------- */
+function renderSettings() {
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Settings</h1><p>Company details printed on bills, and your data.</p></div></div>
+  <div class="stack">
+    <div class="grid2">${DB.companies.map(c => `<section class="panel"><div class="panel-head"><div><h2>${esc(c.name)}</h2><p>${c.gst ? 'GST registered · GSTIN ' + esc(c.gstin) : 'Not GST registered · PAN ' + esc(c.pan)}</p></div><button class="btn small" data-act="edit-co" data-id="${c.id}">Edit</button></div>
+      <dl class="kv"><dt>Address</dt><dd>${esc(c.address)}</dd><dt>Bank</dt><dd>${esc(c.bankName)} · ${esc(c.bankAc)}</dd><dt>IFSC</dt><dd>${esc(c.ifsc)}</dd><dt>Next invoice</dt><dd>${esc(suggestNumber(c, 'invoice'))}</dd></dl></section>`).join('')}</div>
+    <section class="panel"><div class="panel-head"><div><h2>Default terms &amp; conditions</h2><p>Filled into every new document. One point per line. You can still change them on each bill.</p></div></div>
+      <form id="terms-form" class="stack" style="gap:14px"><div class="grid2">${Object.keys(TYPE).map(t => `<div class="field"><label for="terms_${t}">${TYPE[t].label}</label><textarea class="input" id="terms_${t}" rows="9">${esc(DB.terms[t])}</textarea></div>`).join('')}</div>
+      <div class="actions"><button class="btn primary">Save terms</button></div></form>
+    </section>
+    <section class="panel"><div class="panel-head"><div><h2>Your data</h2><p>Everything is saved inside this browser on this computer. Take a backup every week.</p></div></div>
+      <div class="actions"><button class="btn primary" data-act="backup">Download backup</button><label class="btn" for="restore-file">Restore from backup</label><input type="file" id="restore-file" accept=".json,application/json" hidden><button class="btn danger" data-act="reset">Reset to demo data</button></div>
+    </section>
+  </div>`;
+  $('#terms-form').addEventListener('submit', ev => {
+    ev.preventDefault(); Object.keys(TYPE).forEach(t => { DB.terms[t] = $('#terms_' + t).value.trim(); }); save(); toast('Default terms saved');
+  });
+  $('#restore-file').addEventListener('change', ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d.companies || !d.bills || !d.clients) throw 0; DB = migrate(d); save(); toast('Backup restored'); router(); } catch (e) { toast('That file is not a Ravi Kiran Ops backup.'); } };
+    rd.readAsText(f);
+  });
+}
+function companyForm(c) {
+  openForm({title: 'Edit ' + c.short, fields: [
+    {id: 'name', label: 'Name on bill', value: c.name, required: true, full: true},
+    {id: 'address', label: 'Address', value: c.address, full: true},
+    {id: 'tagline', label: 'Business line', value: c.tagline, full: true},
+    {id: 'contact', label: 'Contact no.', value: c.contact}, {id: 'email', label: 'Email', value: c.email},
+    {id: 'gst', label: 'GST registered?', type: 'select', options: [['yes', 'Yes – charge GST'], ['no', 'No – bill without GST']], value: c.gst ? 'yes' : 'no'},
+    {id: 'gstin', label: 'GSTIN', value: c.gstin}, {id: 'pan', label: 'PAN', value: c.pan}, {id: 'sac', label: 'HSN / SAC code', value: c.sac},
+    {id: 'prefix', label: 'Bill number prefix', value: c.prefix, required: true},
+    {id: 'bankName', label: 'Bank name', value: c.bankName}, {id: 'bankAc', label: 'Account no.', value: c.bankAc}, {id: 'ifsc', label: 'IFSC', value: c.ifsc},
+  ], onSubmit: v => {
+    if (v.gst === 'yes' && !v.gstin) return 'Enter the GSTIN, or set GST registered to No.';
+    Object.assign(c, v, {gst: v.gst === 'yes', gstin: v.gstin.toUpperCase()}); save(); toast('Company details saved'); router();
+  }});
+}
+
+/* ---------------- global events ---------------- */
+let presetClient = null;
+main.addEventListener('input', e => { if (e.target.dataset.f && draft && onEditorInput(e.target)) drawTotals(); });
+main.addEventListener('change', e => { if (e.target.dataset.f && draft) { onEditorInput(e.target); onEditorChange(e.target); } });
+document.addEventListener('click', e => {
+  const presetLink = e.target.closest('[data-preset-client]');
+  if (presetLink) presetClient = presetLink.dataset.presetClient;
+  const dc = e.target.closest('[data-date-for]');
+  if (dc) { const inp = document.getElementById(dc.dataset.dateFor); inp.value = dc.dataset.date; inp.dispatchEvent(new Event('input', {bubbles: true})); return; }
+  const row = e.target.closest('tr[data-href]');
+  if (row && !e.target.closest('button,a')) { go(row.dataset.href); return; }
+  const fb = e.target.closest('[data-filter]');
+  if (fb) { billFilter[fb.dataset.filter] = fb.dataset.val; if (location.hash !== '#bills') { history.replaceState(null, '', '#bills'); } renderBills(); return; }
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const {act, id} = btn.dataset;
+  const d = draft;
+  switch (act) {
+    // editor
+    case 'set-type': {
+      const old = d.type, nt = btn.dataset.val; if (old === nt) break;
+      d.type = nt;
+      if (nt !== 'invoice') collapseEntries(d);
+      if ((d.terms || '') === (DB.terms[old] || '')) d.terms = DB.terms[nt];
+      if (nt === 'quotation' && !d.subject) d.subject = DEFAULT_SUBJECT;
+      if (d._isNew && !d._numTouched) d.number = suggestNumber(company(d.companyId), nt);
+      drawEditor(); break;
+    }
+    case 'reset-terms': d.terms = DB.terms[d.type]; drawEditor(); break;
+    case 'save-print': saveDraft(true); break;
+    case 'add-line': d.lines.push(blankLine(d.type)); drawEditor(); break;
+    case 'del-line': d.lines.splice(+btn.dataset.l, 1); drawEditor(); break;
+    case 'add-entry': {
+      const l = d.lines[+btn.dataset.l], last = l.entries[l.entries.length - 1] || {};
+      l.entries.push({date: last.date ? addDays(last.date, 1) : (d.type === 'quotation' ? '' : TODAY), challan: /^\d+$/.test(last.challan || '') ? String(+last.challan + 1) : '', qty: ''});
+      drawEditor();
+      const q = main.querySelector(`[data-f="lines.${btn.dataset.l}.entries.${l.entries.length - 1}.qty"]`); if (q) q.focus();
+      break;
+    }
+    case 'del-entry': d.lines[+btn.dataset.l].entries.splice(+btn.dataset.e, 1); drawEditor(); break;
+    case 'save': saveDraft(false); break;
+    case 'quick-client': clientForm(null, c => { d.clientId = c.id; d.siteId = c.sites[0]?.id || ''; drawEditor(); }); break;
+    // bills
+    case 'print': printBill(id); break;
+    case 'pay': receiveMoneyForm(bill(id).clientId, id); break;
+    case 'receive': receiveMoneyForm(id || undefined); break;
+    case 'convert': convertBill(id, btn.dataset.to); break;
+    case 'del-pay': { const b = bill(id); confirmBox('Remove this payment?', 'The bill will show this amount as pending again.', 'Remove payment', () => { b.payments = b.payments.filter(p => p.id !== btn.dataset.p); save(); toast('Payment removed'); router(); }); break; }
+    case 'del-bill': { const b = bill(id); confirmBox(`Delete ${b.number}?`, 'This bill and its payments will be removed. This cannot be undone.', 'Delete bill', () => {
+      DB.bills = DB.bills.filter(x => x.id !== id); DB.bills.forEach(x => { if (x.convertedTo) x.convertedTo = x.convertedTo.filter(k => k !== id); if (x.convertedFrom === id) delete x.convertedFrom; }); save(); toast('Bill deleted'); go('#bills'); }); break; }
+    case 'view': {
+      const val = btn.dataset.val, k = id[0], rid = id.slice(1);
+      pageView[id] = k === 'e' && pageView[id] === val ? 'all' : val;
+      if (k === 'c') renderClient(rid); else if (k === 'v') renderVehicle(rid); else renderEmployee(rid);
+      break;
+    }
+    case 'pay-period': payPeriod = btn.dataset.val; renderPayments(); break;
+    case 'csv-payments': downloadCSV(`payments-${TODAY}.csv`, [['Date', 'Client', 'Bill', 'Paid by', 'Reference', 'Amount', 'TDS', 'Total'],
+      ...paymentsIn(payPeriod).map(({p, b}) => [dmy(p.date), client(b.clientId)?.name, b.number, p.mode, p.ref, p.amount, +p.tds || 0, (+p.amount || 0) + (+p.tds || 0)])]); break;
+    case 'csv-bills': downloadCSV(`bills-${TODAY}.csv`, [['Type', 'Number', 'Date', 'Company', 'Client', 'Site', 'Work', 'Transport', 'Taxable', 'GST', 'Grand Total', 'Received', 'Pending', 'Status'],
+      ...DB.bills.map(b => { const c = calc(b), cl = client(b.clientId); return [typeLabel(b), b.number, dmy(b.date), company(b.companyId).short, cl?.name, siteOf(cl, b.siteId)?.name, c.sub, c.transport, c.taxable, r2(c.cgst + c.sgst + c.igst), c.grand, b.type === 'invoice' ? received(b) : '', b.type === 'invoice' ? balance(b) : '', billStatus(b)[0]]; })]); break;
+    // clients
+    case 'add-client': clientForm(null); break;
+    case 'edit-client': clientForm(client(id)); break;
+    case 'del-client': { const c = client(id), n = DB.bills.filter(b => b.clientId === id).length;
+      if (n) { toast(`${c.name} has ${pl(n, 'bill', 'bills')}. Delete those first.`); break; }
+      confirmBox(`Delete ${c.name}?`, 'The client and their sites will be removed.', 'Delete client', () => { DB.clients = DB.clients.filter(x => x.id !== id); save(); toast('Client deleted'); go('#clients'); }); break; }
+    case 'del-site': { const c = client(id), s = btn.dataset.s, n = DB.bills.filter(b => b.siteId === s).length;
+      if (n) { toast(`This site is on ${pl(n, 'bill', 'bills')}, so it can't be removed.`); break; }
+      c.sites = c.sites.filter(x => x.id !== s); save(); toast('Site removed'); renderClient(id); break; }
+    // vehicles
+    case 'add-vehicle': vehicleForm(null); break;
+    case 'edit-vehicle': vehicleForm(vehicle(id)); break;
+    case 'del-vehicle': { const v = vehicle(id), n = vehicleUse(id).length;
+      if (n) { toast(`${vehicleLabel(v)} is on ${pl(n, 'bill', 'bills')}, so it can't be deleted. Mark it Idle instead.`); break; }
+      confirmBox(`Delete ${vehicleLabel(v)}?`, 'The vehicle will be removed from the list.', 'Delete vehicle', () => { DB.vehicles = DB.vehicles.filter(x => x.id !== id); DB.employees.forEach(e => { if (e.vehicleId === id) e.vehicleId = ''; }); save(); toast('Vehicle deleted'); go('#vehicles'); }); break; }
+    case 'csv-vehicles': downloadCSV(`vehicles-${TODAY}.csv`, [['Vehicle', 'Number', 'Type', 'Company', 'Charged per', 'Rate', 'Status', 'Site', 'Operator', 'Work billed', 'Amount billed'],
+      ...DB.vehicles.map(v => { const u = vehicleUse(v.id); return [v.name, v.regNo, v.type, company(v.companyId)?.short, v.unit, v.rate, v.status, v.site, employee(v.operatorId)?.name, r2(u.reduce((s, x) => s + x.qty, 0)), r2(u.reduce((s, x) => s + x.amt, 0))]; })]); break;
+    // staff
+    case 'add-emp': employeeForm(null); break;
+    case 'edit-emp': employeeForm(employee(id)); break;
+    case 'del-emp': { const e = employee(id); confirmBox(`Delete ${e.name}?`, 'Their salary and advance history will be removed too.', 'Delete employee', () => { DB.employees = DB.employees.filter(x => x.id !== id); DB.vehicles.forEach(v => { if (v.operatorId === id) v.operatorId = ''; }); save(); toast('Employee deleted'); go('#staff'); }); break; }
+    case 'advance': giveAdvanceForm(null); break;
+    case 'salary': salaryForm(null); break;
+    case 'advance-one': giveAdvanceForm(employee(id)); break;
+    case 'salary-one': salaryForm(employee(id)); break;
+    case 'del-adv': { const e = employee(id); confirmBox('Remove this advance?', 'Use this only if it was entered by mistake.', 'Remove', () => { e.advances = e.advances.filter(a => a.id !== btn.dataset.x); save(); router(); }); break; }
+    case 'del-sal': { const e = employee(id); confirmBox('Remove this salary entry?', 'Any advance cut in it will show as pending again.', 'Remove', () => { e.salaries = e.salaries.filter(p => p.id !== btn.dataset.x); save(); router(); }); break; }
+    case 'csv-staff': downloadCSV(`employees-${TODAY}.csv`, [['Name', 'Work', 'Phone', 'Vehicle', 'Monthly salary', 'Bhatta per day', 'Advance pending', 'Joined'],
+      ...DB.employees.map(e => [e.name, e.role, e.phone, vehicleLabel(vehicle(e.vehicleId)), e.salary, e.allowance, Math.max(0, advanceDue(e)), dmy(e.joined)])]); break;
+    // settings
+    case 'edit-co': companyForm(company(id)); break;
+    case 'backup': {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(DB, null, 1)], {type: 'application/json'}));
+      a.download = `ravi-kiran-backup-${TODAY}.json`; document.body.appendChild(a); a.click(); a.remove(); toast('Backup downloaded'); break;
+    }
+    case 'reset': confirmBox('Reset to demo data?', 'Everything you entered will be replaced with the sample data. Download a backup first if you need it.', 'Reset', () => { DB = migrate(seed()); save(); toast('Demo data loaded'); go('#'); router(); }); break;
+  }
+});
+// "+ New bill" from a client page pre-selects that client
+window.addEventListener('hashchange', () => {
+  if (presetClient && draft && draft._isNew) { const c = client(presetClient); if (c) { draft.clientId = c.id; draft.siteId = c.sites[0]?.id || ''; drawEditor(); } }
+  presetClient = null;
+});
+
+router();
+</script>
+</body>
+</html>
