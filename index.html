@@ -641,6 +641,17 @@ function billStatus(b) {
 const chip = ([t, c]) => `<span class="chip ${c}">${esc(t)}</span>`;
 const invoices = () => DB.bills.filter(b => b.type === 'invoice');
 const advanceDue = e => r2(e.advances.reduce((s, a) => s + (+a.amount || 0), 0) - e.salaries.reduce((s, p) => s + (+p.cut || 0), 0));
+// Next salary he is owed: last month if not paid yet, otherwise this month (full month).
+function salaryDue(e) {
+  const m = e.salaries.some(p => p.month === PREV_MONTH) ? THIS_MONTH : PREV_MONTH;
+  const days = daysInMonth(m), allow = Math.round(days * e.allowance), total = e.salary + allow, adv = Math.max(0, advanceDue(e));
+  return {m, days, salary: e.salary, allow, total, adv, toPay: Math.max(0, total - adv), carry: Math.max(0, adv - total)};
+}
+const salaryEq = (e, d) => eq([
+  {label: `${monthName(d.m)} salary`, value: rs(d.salary)},
+  ...(d.allow ? ['+', {label: `Allowance · ${d.days} days × ${rs(e.allowance)}`, value: rs(d.allow)}] : []),
+  '−', {label: 'Advance taken', value: rs(d.adv), tone: d.adv ? 'warn' : ''},
+  '=', {label: 'To pay', value: rs(d.toPay), tone: 'good', sub: d.carry ? `${rs(d.carry)} advance goes to next month` : ''}]);
 
 /* ---------------- modal / forms ---------------- */
 function openModal(html, narrow) {
@@ -809,9 +820,9 @@ function renderHome() {
         : `<div class="empty"><b>No quotation waiting</b><a class="linkbtn" href="#bill/new/quotation">Make a quotation</a></div>`}
     </section>
     <section class="panel">
-      <div class="panel-head"><h2>Advance to recover</h2><a class="btn small" href="#advances">All</a></div>
-      ${advList.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${advList.map(e => `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || '')}</span></td><td class="r"><b class="t-bad">${rs(advanceDue(e))}</b></td><td class="r"><button class="btn small" data-act="salary-one" data-id="${e.id}">Pay salary</button></td></tr>`).join('')}</tbody></table></div>`
-        : `<div class="empty"><b>No advance pending</b></div>`}
+      <div class="panel-head"><h2>Advance taken by staff</h2><a class="btn small" href="#advances">All</a></div>
+      ${advList.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${advList.map(e => `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || '')}</span></td><td class="r"><b class="t-warn">${rs(advanceDue(e))}</b><span class="sub">to pay ${rs(salaryDue(e).toPay)}</span></td><td class="r"><button class="btn small" data-act="salary-one" data-id="${e.id}">Pay salary</button></td></tr>`).join('')}</tbody></table></div>`
+        : `<div class="empty"><b>No advance with staff</b></div>`}
     </section>
   </div>`;
 }
@@ -1331,7 +1342,7 @@ function personCard(e) {
   const due = Math.max(0, advanceDue(e));
   return `<div class="who"><div class="who-av">${esc(initials(e.name))}</div>
     <div class="who-main"><b>${esc(e.name)}</b><span>${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || 'no vehicle')}</span><span>${rs(e.salary)}/month + ${rs(e.allowance)}/day allowance</span></div>
-    <div class="who-r"><span>Advance pending</span><b class="${due ? 't-bad' : 't-good'}">${rs(due)}</b>${last ? `<small>last ${rs(last.amount)} on ${dmy(last.date)}</small>` : ''}</div></div>`;
+    <div class="who-r"><span>Advance taken</span><b class="${due ? 't-bad' : 't-good'}">${rs(due)}</b>${last ? `<small>last ${rs(last.amount)} on ${dmy(last.date)}</small>` : ''}</div></div>`;
 }
 const modalFoot = label => `<div class="modal-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">${label}</button></div>`;
 const showErr = (id, msg) => { $(id).innerHTML = `<div class="errors" style="margin-bottom:14px">${esc(msg)}</div>`; $(id).scrollIntoView({block: 'nearest'}); };
@@ -1341,7 +1352,7 @@ function giveAdvanceForm(pre) {
   openModal(`<h2>Give advance</h2><form id="aform" novalidate><div id="aerr"></div>
     <div class="form-grid">
       <div class="field full"><label for="a_emp">Who is taking the advance?</label><select class="input" id="a_emp"><option value="">Choose person…</option>
-        ${DB.employees.map(x => `<option value="${x.id}" ${pre && pre.id === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.role)}${advanceDue(x) > 0 ? ' · ' + rs(advanceDue(x)) + ' pending' : ''}</option>`).join('')}</select></div>
+        ${DB.employees.map(x => `<option value="${x.id}" ${pre && pre.id === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.role)}${advanceDue(x) > 0 ? ' · ' + rs(advanceDue(x)) + ' advance taken' : ''}</option>`).join('')}</select></div>
       <div class="full" id="a_card"></div>
       <div class="field"><label for="a_amt">Amount (₹)</label><input class="input big" id="a_amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
       <div class="field"><label for="a_date">Date</label><input class="input" id="a_date" type="date" value="${TODAY}">${dateChips('a_date')}</div>
@@ -1352,8 +1363,11 @@ function giveAdvanceForm(pre) {
   const upd = () => {
     const e = employee($('#a_emp').value), amt = +$('#a_amt').value || 0;
     $('#a_card').innerHTML = e ? personCard(e) : '';
-    const due = e ? Math.max(0, advanceDue(e)) : 0;
-    $('#a_sum').innerHTML = e ? eq([{label: 'Pending now', value: rs(due)}, '+', {label: 'This advance', value: rs(amt), tone: 'warn'}, '=', {label: 'To recover', value: rs(due + amt), tone: 'bad'}]) : '';
+    if (!e) { $('#a_sum').innerHTML = ''; return; }
+    const d = salaryDue(e), adv = d.adv + amt, left = d.total - adv;
+    $('#a_sum').innerHTML = eq([{label: `${monthName(d.m)} salary${d.allow ? ' + allowance' : ''}`, value: rs(d.total)}, '−',
+      {label: d.adv ? `Advance taken · ${rs(d.adv)} + ${rs(amt)}` : 'Advance', value: rs(adv), tone: 'warn'}, '=',
+      {label: 'Left to pay', value: rs(Math.max(0, left)), tone: left < 0 ? 'bad' : 'good', sub: left < 0 ? `Advance is ${rs(-left)} more than the salary` : ''}]);
   };
   upd();
   $('#aform').addEventListener('input', upd);
@@ -1439,7 +1453,7 @@ function salaryForm(e) {
       ${e ? `<div class="full">${personCard(e)}</div>
       <div class="field"><label for="s_month">Salary for month</label><input class="input" id="s_month" type="month" value="${month}"></div>
       <div class="field"><label for="s_days">Days worked</label><input class="input" id="s_days" type="number" inputmode="decimal" min="0" step="0.5" value="${daysInMonth(month)}"><span class="hint" id="s_dim"></span></div>
-      <div class="field"><label for="s_cut">Advance deduction (₹)</label><input class="input" id="s_cut" type="number" inputmode="decimal" min="0" step="any" value="${Math.min(due, Math.round(e.salary * 0.5))}"><span class="hint">Pending: ${rs(due)}</span></div>
+      <div class="field"><label for="s_cut">Advance to adjust (₹)</label><input class="input" id="s_cut" type="number" inputmode="decimal" min="0" step="any" value="${Math.min(due, salaryDue(e).total)}"><span class="hint">Advance taken: ${rs(due)}</span></div>
       <div class="field"><label for="s_paid">Paid on</label><input class="input" id="s_paid" type="date" value="${TODAY}">${dateChips('s_paid')}</div>
       <div class="field full"><span class="field-label">Paid by</span>${radioSeg('s_mode', ['Cash', 'UPI', 'Bank transfer'], 'Cash')}</div>` : ''}
     </div>
@@ -1451,14 +1465,14 @@ function salaryForm(e) {
     const earned = Math.round(e.salary * days / dim), allow = Math.round(days * e.allowance), cut = Math.min(+$('#s_cut').value || 0, due);
     $('#s_dim').textContent = `${dim} days in ${monthName(m)}`;
     $('#s_calc').innerHTML = (e.salaries.some(p => p.month === m) ? `<div class="errors" style="margin-top:14px">${monthName(m)} salary is already paid to ${esc(e.name)}.</div>` : '')
-      + eq([{label: `Salary · ${days} days`, value: rs(earned)}, '+', {label: 'Allowance', value: rs(allow)}, '−', {label: 'Advance deduction', value: rs(cut)}, '=', {label: 'Net pay', value: rs(earned + allow - cut), tone: 'good'}]);
+      + eq([{label: `Salary · ${days} days`, value: rs(earned)}, ...(allow ? ['+', {label: `Allowance · ${days} × ${rs(e.allowance)}`, value: rs(allow)}] : []), '−', {label: 'Advance taken', value: rs(cut), tone: cut ? 'warn' : ''}, '=', {label: 'To pay', value: rs(earned + allow - cut), tone: 'good', sub: due - cut > 0.5 ? `${rs(due - cut)} advance left for next month` : ''}]);
     return {m, days, earned, allow, cut, net: earned + allow - cut};
   };
   calcS();
   $('#sform').addEventListener('input', ev => { if (ev.target.id !== 's_emp') calcS(); });
   $('#sform').addEventListener('submit', ev => {
     ev.preventDefault(); const r = calcS();
-    const err = !r.m ? 'Choose the month.' : e.salaries.some(p => p.month === r.m) ? `${monthName(r.m)} salary is already paid. Delete that entry on ${e.name}'s page to redo it.` : (+$('#s_cut').value || 0) > due + 0.5 ? `Advance pending is only ${rs(due)}.` : r.net < 0 ? 'Advance deduction is more than the salary.' : !(r.days > 0) ? 'Enter days worked.' : '';
+    const err = !r.m ? 'Choose the month.' : e.salaries.some(p => p.month === r.m) ? `${monthName(r.m)} salary is already paid. Delete that entry on ${e.name}'s page to redo it.` : (+$('#s_cut').value || 0) > due + 0.5 ? `Advance pending is only ${rs(due)}.` : r.net < 0 ? 'Advance is more than the salary.' : !(r.days > 0) ? 'Enter days worked.' : '';
     if (err) return showErr('#serr', err);
     e.salaries.push({id: uid(), month: r.m, days: r.days, earned: r.earned, allowanceAmt: r.allow, cut: r.cut, net: r.net, paidOn: $('#s_paid').value, mode: radioVal('s_mode')});
     save(); closeModal(); toast(`${monthName(r.m)} salary ${rs(r.net)} paid to ${e.name}`); router();
@@ -1485,20 +1499,17 @@ function renderPayments() {
 /* ---------------- STAFF MONEY ---------------- */
 const staffTabs = on => `<div class="toolbar"><div class="seg"><a href="#staff" class="${on === 'people' ? 'on' : ''}">People</a><a href="#advances" class="${on === 'adv' ? 'on' : ''}">Advances</a><a href="#salaries/${PREV_MONTH}" class="${on === 'sal' ? 'on' : ''}">Salary sheet</a></div></div>`;
 function renderAdvances() {
-  const people = DB.employees.map(e => {
-    const given = e.advances.reduce((s, a) => s + (+a.amount || 0), 0), back = e.salaries.reduce((s, p) => s + (+p.cut || 0), 0);
-    return {e, given, back, due: Math.max(0, r2(given - back))};
-  }).filter(x => x.given > 0).sort((a, b) => b.due - a.due);
-  const T = k => people.reduce((s, x) => s + x[k], 0);
+  const people = DB.employees.filter(e => advanceDue(e) > 0).map(e => ({e, d: salaryDue(e)})).sort((a, b) => b.d.adv - a.d.adv);
+  const total = people.reduce((s, x) => s + x.d.adv, 0);
   main.innerHTML = `
   <a class="crumb" href="#">← Home</a>
-  <div class="page-head"><div><h1>Advances</h1></div><div class="actions"><button class="btn primary" data-act="advance">Give advance</button></div></div>
+  <div class="page-head"><div><h1>Advances</h1><p>Advance is taken off the next salary.</p></div><div class="actions"><button class="btn primary" data-act="advance">Give advance</button></div></div>
   ${staffTabs('adv')}
-  ${eq([{label: 'Advance given', value: rs(T('given')), tone: 'warn'}, '−', {label: 'Deducted from salary', value: rs(T('back'))}, '=', {label: 'Balance to recover', value: rs(T('due')), tone: T('due') > 0 ? 'bad' : 'good', sub: `${pl(people.filter(x => x.due).length, 'person', 'people')}`}])}
+  ${eq([{label: 'Advance with staff', value: rs(total), tone: 'warn', sub: pl(people.length, 'person', 'people')}])}
   <section class="panel">
-  ${people.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Given</th><th class="r">Deducted from salary</th><th class="r">Balance to recover</th></tr></thead><tbody>
-  ${people.map(x => `<tr class="click" data-href="#staff/${x.e.id}"><td><b>${esc(x.e.name)}</b><span class="sub">${esc(x.e.role)}</span></td><td class="r">${rs(x.given)}</td><td class="r">${x.back ? '− ' + rs(x.back) : '—'}</td><td class="r">${x.due ? `<b class="t-bad">${rs(x.due)}</b>` : chip(['Cleared', 'good'])}</td></tr>`).join('')}
-  </tbody><tfoot><tr><td>Total</td><td class="r">${rs(T('given'))}</td><td class="r">− ${rs(T('back'))}</td><td class="r">${rs(T('due'))}</td></tr></tfoot></table></div>` : `<div class="empty"><b>No advance given</b></div>`}</section>`;
+  ${people.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Salary + allowance</th><th class="r">Advance taken</th><th class="r">To pay</th><th></th></tr></thead><tbody>
+  ${people.map(({e, d}) => `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}</span></td><td class="r">${rs(d.total)}<span class="sub">${monthName(d.m)}</span></td><td class="r"><b class="t-warn">− ${rs(d.adv)}</b></td><td class="r"><b class="t-good">${rs(d.toPay)}</b></td><td class="r"><button class="btn small" data-act="salary-one" data-id="${e.id}">Pay salary</button></td></tr>`).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>No advance with staff</b></div>`}</section>`;
 }
 function renderSalaries(month) {
   month = month || PREV_MONTH;
@@ -1511,8 +1522,8 @@ function renderSalaries(month) {
   ${staffTabs('sal')}
   <div class="toolbar"><select class="input" id="sal-month" style="max-width:220px" aria-label="Month">${months.map(m => `<option value="${m}" ${m === month ? 'selected' : ''}>${monthName(m)}</option>`).join('')}</select>
     <span class="chip ${paid.length === rows.length ? 'good' : 'warn'}">${paid.length} of ${rows.length} paid</span></div>
-  ${eq([{label: 'Salary', value: rs(T('earned'))}, '+', {label: 'Allowance', value: rs(T('allowanceAmt'))}, '−', {label: 'Advance deduction', value: rs(T('cut'))}, '=', {label: 'Net paid', value: rs(T('net')), tone: 'good'}])}
-  <section class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Days</th><th class="r">Salary</th><th class="r">Allowance</th><th class="r">Advance deduction</th><th class="r">Net paid</th></tr></thead><tbody>
+  ${eq([{label: 'Salary', value: rs(T('earned'))}, '+', {label: 'Allowance', value: rs(T('allowanceAmt'))}, '−', {label: 'Advance', value: rs(T('cut'))}, '=', {label: 'Paid', value: rs(T('net')), tone: 'good'}])}
+  <section class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th class="r">Days</th><th class="r">Salary</th><th class="r">Allowance</th><th class="r">Advance</th><th class="r">Paid</th></tr></thead><tbody>
   ${rows.map(({e, p}) => p ? `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">paid ${dmy(p.paidOn)} · ${esc(p.mode)}</span></td><td class="r">${p.days}</td><td class="r">${rs(p.earned)}</td><td class="r">+ ${rs(p.allowanceAmt)}</td><td class="r">${+p.cut ? '− ' + rs(p.cut) : '—'}</td><td class="r"><b class="t-good">${rs(p.net)}</b></td></tr>`
     : `<tr><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}</span></td><td colspan="4" class="r">${chip(['Not paid', 'warn'])}</td><td class="r"><button class="btn small primary" data-act="salary-one" data-id="${e.id}">Pay now</button></td></tr>`).join('')}
   </tbody><tfoot><tr><td>Total</td><td></td><td class="r">${rs(T('earned'))}</td><td class="r">+ ${rs(T('allowanceAmt'))}</td><td class="r">${T('cut') ? '− ' + rs(T('cut')) : '—'}</td><td class="r">${rs(T('net'))}</td></tr></tfoot></table></div></section>`;
@@ -1524,36 +1535,28 @@ function renderStaff() {
   <div class="page-head"><div><h1>Employees</h1><p>${pl(DB.employees.length, 'person', 'people')} · monthly salary bill ${rs(totalSal)}</p></div>
     <div class="actions"><button class="btn" data-act="csv-staff">Download for Excel</button><button class="btn" data-act="advance">Give advance</button><button class="btn" data-act="salary">Pay salary</button><button class="btn primary" data-act="add-emp">+ Add employee</button></div></div>
   ${staffTabs('people')}
-  <section class="panel">${DB.employees.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Vehicle</th><th class="r">Monthly salary</th><th class="r">Daily allowance</th><th class="r">Advance pending</th><th>Last salary</th></tr></thead><tbody>
-  ${DB.employees.map(e => { const last = [...e.salaries].sort((a, b) => b.month.localeCompare(a.month))[0]; const ad = advanceDue(e);
+  <section class="panel">${DB.employees.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Vehicle</th><th class="r">Salary + allowance</th><th class="r">Advance taken</th><th class="r">To pay</th><th>Last paid</th></tr></thead><tbody>
+  ${DB.employees.map(e => { const last = [...e.salaries].sort((a, b) => b.month.localeCompare(a.month))[0]; const d = salaryDue(e);
     return `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}${e.phone ? ' · ' + esc(e.phone) : ''}</span></td>
-    <td>${esc(vehicleLabel(vehicle(e.vehicleId)) || '—')}</td><td class="r">${rs(e.salary)}</td><td class="r">${rs(e.allowance)}</td>
-    <td class="r">${ad > 0 ? `<b style="color:var(--warn)">${rs(ad)}</b>` : '—'}</td><td>${last ? `${monthName(last.month)} <span class="sub">${rs(last.net)} on ${dmy(last.paidOn)}</span>` : chip(['Not paid yet', 'warn'])}</td></tr>`; }).join('')}
+    <td>${esc(vehicleLabel(vehicle(e.vehicleId)) || '—')}</td><td class="r">${rs(d.total)}<span class="sub">${rs(e.salary)}${d.allow ? ' + ' + rs(d.allow) + ' allowance' : ''}</span></td>
+    <td class="r">${d.adv ? `<b class="t-warn">− ${rs(d.adv)}</b>` : '—'}</td><td class="r"><b class="t-good">${rs(d.toPay)}</b><span class="sub">${monthName(d.m)}</span></td>
+    <td>${last ? `${monthName(last.month)} <span class="sub">${rs(last.net)} on ${dmy(last.paidOn)}</span>` : chip(['Not paid yet', 'warn'])}</td></tr>`; }).join('')}
   </tbody></table></div>` : `<div class="empty"><b>No employees yet</b>Add operators, drivers and helpers.</div>`}</section>`;
 }
 function renderEmployee(id) {
   const e = employee(id); if (!e) return notFound();
-  const given = e.advances.reduce((s, a) => s + (+a.amount || 0), 0), cut = e.salaries.reduce((s, p) => s + (+p.cut || 0), 0), due = Math.max(0, advanceDue(e));
-  const paidYear = e.salaries.filter(p => fyOf(p.month + '-01') === CUR_FY).reduce((s, p) => s + p.net, 0);
-  const view = pageView['e' + id] || 'all';
+  const d = salaryDue(e);
   const all = [...e.advances.map(a => ({date: a.date, kind: 'adv', a})), ...e.salaries.map(p => ({date: p.paidOn || p.month + '-28', kind: 'sal', p}))].sort((x, y) => y.date.localeCompare(x.date));
-  const ledger = all.filter(x => view === 'all' || (view === 'adv' ? x.kind === 'adv' : view === 'cut' ? x.kind === 'sal' && +x.p.cut : x.kind === 'sal'));
-  const title = {all: 'Everything', adv: 'Advances given', cut: 'Advance deducted from salary', sal: 'Salary paid'}[view];
   main.innerHTML = `
   <a class="crumb" href="#staff">← All staff</a>
-  <div class="page-head"><div><h1>${esc(e.name)}</h1><p>${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || 'no vehicle')} · ${rs(e.salary)}/month + ${rs(e.allowance)}/day allowance${e.phone ? ' · ' + esc(e.phone) : ''}</p></div>
+  <div class="page-head"><div><h1>${esc(e.name)}</h1><p>${esc(e.role)} · ${esc(vehicleLabel(vehicle(e.vehicleId)) || 'no vehicle')} · ${rs(e.salary)}/month${e.allowance ? ' + ' + rs(e.allowance) + '/day allowance' : ''}${e.phone ? ' · ' + esc(e.phone) : ''}</p></div>
     <div class="actions"><button class="btn" data-act="edit-emp" data-id="${e.id}">Edit</button><button class="btn danger" data-act="del-emp" data-id="${e.id}">Delete</button><button class="btn" data-act="advance-one" data-id="${e.id}">Give advance</button><button class="btn primary" data-act="salary-one" data-id="${e.id}">Pay salary</button></div></div>
-  ${eq([
-    {label: 'Advance given', value: rs(given), tone: 'warn', sub: `${pl(e.advances.length, 'time', 'times')}`, act: 'view', val: 'adv', on: view === 'adv'}, '−',
-    {label: 'Deducted from salary', value: rs(cut), act: 'view', val: 'cut', on: view === 'cut'}, '=',
-    {label: 'Balance to recover', value: rs(due), tone: due > 0 ? 'bad' : 'good', act: 'view', val: 'adv', on: false},
-    '|', {label: 'Salary paid this year', value: rs(paidYear), tone: 'good', sub: `${pl(e.salaries.filter(p => fyOf(p.month + '-01') === CUR_FY).length, 'month', 'months')}`, act: 'view', val: 'sal', on: view === 'sal'},
-  ], 'e' + id)}
-  <section class="panel"><div class="panel-head"><h2>${title}</h2>${view !== 'all' ? `<button class="btn small" data-act="view" data-val="all" data-id="e${id}">Show everything</button>` : ''}</div>
-  ${ledger.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>
-  ${ledger.map(x => x.kind === 'adv'
-    ? `<tr><td><b>${dmy(x.a.date)}</b></td><td>${chip(['Advance', 'warn'])}<span class="sub">${esc(x.a.note || '')}</span></td><td class="r"><b class="t-warn">${rs(x.a.amount)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-adv" data-id="${e.id}" data-x="${x.a.id}">✕</button></td></tr>`
-    : `<tr><td><b>${dmy(x.p.paidOn)}</b></td><td>${chip([monthName(x.p.month) + ' salary', 'good'])}<span class="sub">${rs(x.p.earned)} + allowance ${rs(x.p.allowanceAmt)}${+x.p.cut ? ' − advance ' + rs(x.p.cut) : ''}</span></td><td class="r"><b class="t-good">${rs(x.p.net)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-sal" data-id="${e.id}" data-x="${x.p.id}">✕</button></td></tr>`).join('')}
+  ${salaryEq(e, d)}
+  <section class="panel"><div class="panel-head"><h2>History</h2></div>
+  ${all.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>What</th><th class="r">Amount</th><th></th></tr></thead><tbody>
+  ${all.map(x => x.kind === 'adv'
+    ? `<tr><td><b>${dmy(x.a.date)}</b></td><td>${chip(['Advance given', 'warn'])}<span class="sub">${esc([x.a.mode, x.a.note].filter(Boolean).join(' · '))}</span></td><td class="r"><b class="t-warn">${rs(x.a.amount)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-adv" data-id="${e.id}" data-x="${x.a.id}">✕</button></td></tr>`
+    : `<tr><td><b>${dmy(x.p.paidOn)}</b></td><td>${chip([monthName(x.p.month) + ' salary paid', 'good'])}<span class="sub">Salary ${rs(x.p.earned)}${+x.p.allowanceAmt ? ' + allowance ' + rs(x.p.allowanceAmt) : ''}${+x.p.cut ? ' − advance ' + rs(x.p.cut) : ''} = ${rs(x.p.net)}</span></td><td class="r"><b class="t-good">${rs(x.p.net)}</b></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-sal" data-id="${e.id}" data-x="${x.p.id}">✕</button></td></tr>`).join('')}
   </tbody></table></div>` : `<div class="empty"><b>Nothing here yet</b></div>`}</section>`;
 }
 
@@ -1685,8 +1688,8 @@ document.addEventListener('click', e => {
     case 'salary-one': salaryForm(employee(id)); break;
     case 'del-adv': { const e = employee(id); confirmBox('Remove this advance?', 'Use this only if it was entered by mistake.', 'Remove', () => { e.advances = e.advances.filter(a => a.id !== btn.dataset.x); save(); router(); }); break; }
     case 'del-sal': { const e = employee(id); confirmBox('Remove this salary entry?', 'Any advance deducted in it will show as pending again.', 'Remove', () => { e.salaries = e.salaries.filter(p => p.id !== btn.dataset.x); save(); router(); }); break; }
-    case 'csv-staff': downloadCSV(`employees-${TODAY}.csv`, [['Name', 'Work', 'Phone', 'Vehicle', 'Monthly salary', 'Daily allowance', 'Advance pending', 'Joined'],
-      ...DB.employees.map(e => [e.name, e.role, e.phone, vehicleLabel(vehicle(e.vehicleId)), e.salary, e.allowance, Math.max(0, advanceDue(e)), dmy(e.joined)])]); break;
+    case 'csv-staff': downloadCSV(`employees-${TODAY}.csv`, [['Name', 'Work', 'Phone', 'Vehicle', 'Monthly salary', 'Daily allowance', 'Advance taken', 'To pay', 'For month', 'Joined'],
+      ...DB.employees.map(e => { const d = salaryDue(e); return [e.name, e.role, e.phone, vehicleLabel(vehicle(e.vehicleId)), e.salary, e.allowance, d.adv, d.toPay, monthName(d.m), dmy(e.joined)]; })]); break;
     // settings
     case 'edit-co': companyForm(company(id)); break;
     case 'backup': {
