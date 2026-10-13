@@ -4,9 +4,6 @@
   "scripts": {
     "build": "node build.cjs"
   },
-  "dependencies": {
-    "@vercel/functions": "^3.9.11"
-  },
   "devDependencies": {
     "terser": "^5.36.0"
   },
