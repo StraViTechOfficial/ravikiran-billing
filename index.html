@@ -291,6 +291,8 @@ table.sheet{width:100%;border-collapse:collapse;font-size:14px;min-width:860px}
 .tot-box>div:not(.totals){display:flex;justify-content:space-between;align-items:center;gap:12px}
 .tot-box label{font-weight:500}
 .tot-box .input{max-width:150px;text-align:right;min-height:36px}
+.tot-box .dsl{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.tot-box .dsl .input{width:78px}
 .savebar{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));margin-top:12px;background:var(--bg);border-top:1px solid var(--line);z-index:5}
 .savebar .btn{min-width:110px}
 
@@ -392,6 +394,11 @@ table.sheet{width:100%;border-collapse:collapse;font-size:14px;min-width:860px}
   .tbl td:first-child{flex:1 1 100%}
   .tbl td.r{margin-left:auto}
   .tbl td.r+td.r{margin-left:0}
+  .tbl.lab tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
+  .tbl.lab td:first-child{grid-column:1/-1}
+  .tbl.lab td.r{margin:0;text-align:left}
+  .tbl.lab td[data-l]::before{content:attr(data-l);display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .tbl.lab tfoot tr{display:none}
   .tbl tfoot tr{border-top:2px solid var(--line);border-bottom:0}
   .tbl tfoot td:empty{display:none}
   /* sums stack as rows, the sign stays between them */
@@ -496,6 +503,9 @@ const DEFAULT_TERMS = {
 };
 function migrate(d) {
   d.terms = Object.assign(clone(DEFAULT_TERMS), d.terms || {});
+  const NORM = {Excavator: 10, 'Backhoe loader': 5, Tipper: 40, Roller: 6, Loader: 8, Tractor: 4};
+  d.vehicles.forEach(v => { if (v.dieselNorm == null) v.dieselNorm = NORM[v.type] || 0; });
+  if (!d.diesel) d.diesel = seedDiesel(d);
   d.bills.forEach(b => { if (b.terms == null) b.terms = d.terms[b.type]; if (b.subject == null) b.subject = b.type === 'quotation' ? 'Hiring of earth-moving machinery' : ''; if (b.attn == null) b.attn = ''; });
   return d;
 }
@@ -507,6 +517,19 @@ function load() {
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('Could not save in this browser. Download a backup from Settings.'); } }
 
+// Sample diesel fills that match the work on the sample bills (Ex200 deliberately runs high).
+function seedDiesel(d) {
+  const out = []; let n = 0;
+  d.bills.filter(b => b.type === 'invoice').forEach(b => b.lines.forEach(l => {
+    const v = d.vehicles.find(x => x.id === l.vehicleId); if (!v || !v.dieselNorm) return;
+    l.entries.forEach(e => {
+      const q = parseQty(e.qty); if (!(q > 0)) return; n++;
+      const litres = Math.max(5, Math.round(q * v.dieselNorm * (v.id === 'v4' ? 1.25 : 0.94 + (n % 5) * 0.03) / 5) * 5), rate = r2(91.5 + (n % 4) * 0.35);
+      out.push({id: 'd' + n, vehicleId: v.id, date: e.date || b.date, litres, rate, amount: r2(litres * rate), meter: '', where: n % 3 ? 'HP pump, Moshi' : 'Indian Oil, Chikhali', mode: n % 3 ? 'Pump credit' : 'Cash', note: ''});
+    });
+  }));
+  return out;
+}
 function seed() {
   const ent = (date, challan, qty) => ({date, challan, qty: String(qty)});
   const line = (vehicleId, description, attachment, unit, rate, entries) => ({vehicleId, description, attachment, unit, rate: String(rate), entries});
@@ -534,11 +557,11 @@ function seed() {
         address: 'Phase 3, Hinjewadi, Pune 411057', sites: [{id: 's5', name: 'Hinjewadi Phase 3'}]},
     ],
     vehicles: [
-      {id: 'v1', name: 'Pocland Ex70', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 1400, attachment: 'Bucket', status: 'On site', site: 'Arise Associates – Tathawade', operatorId: 'e1'},
-      {id: 'v2', name: 'Hyva', regNo: 'MH 14 KA 2798', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Idle', site: '', operatorId: 'e2'},
-      {id: 'v3', name: 'JCB 3DX', regNo: 'MH 14 JH 4512', type: 'Backhoe loader', companyId: 'rke', unit: 'Hour', rate: 1100, attachment: 'Bucket', status: 'On site', site: 'Shree Ganesh – Chikhali', operatorId: 'e3'},
-      {id: 'v4', name: 'Pocland Ex200', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 2200, attachment: 'Bucket', status: 'On site', site: 'Pune Infra – Hinjewadi', operatorId: 'e6'},
-      {id: 'v5', name: 'Hyva', regNo: 'MH 14 KA 3310', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Under repair', site: '', operatorId: 'e5'},
+      {id: 'v1', name: 'Pocland Ex70', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 1400, attachment: 'Bucket', status: 'On site', site: 'Arise Associates – Tathawade', operatorId: 'e1', dieselNorm: 7},
+      {id: 'v2', name: 'Hyva', regNo: 'MH 14 KA 2798', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Idle', site: '', operatorId: 'e2', dieselNorm: 40},
+      {id: 'v3', name: 'JCB 3DX', regNo: 'MH 14 JH 4512', type: 'Backhoe loader', companyId: 'rke', unit: 'Hour', rate: 1100, attachment: 'Bucket', status: 'On site', site: 'Shree Ganesh – Chikhali', operatorId: 'e3', dieselNorm: 5},
+      {id: 'v4', name: 'Pocland Ex200', regNo: '', type: 'Excavator', companyId: 'rke', unit: 'Hour', rate: 2200, attachment: 'Bucket', status: 'On site', site: 'Pune Infra – Hinjewadi', operatorId: 'e6', dieselNorm: 14},
+      {id: 'v5', name: 'Hyva', regNo: 'MH 14 KA 3310', type: 'Tipper', companyId: 'tl', unit: 'Day', rate: 6000, attachment: '', status: 'Under repair', site: '', operatorId: 'e5', dieselNorm: 40},
     ],
     employees: [
       {id: 'e1', name: 'Santosh Pawar', role: 'Operator', phone: '98810 22341', vehicleId: 'v1', salary: 18000, allowance: 200, joined: '2023-04-01',
@@ -617,7 +640,8 @@ function calc(b) {
   const co = company(b.companyId) || {};
   const sub = r2(b.lines.reduce((s, l) => s + lineAmt(l), 0));
   const transport = r2(+b.transport || 0);
-  const taxable = r2(sub + transport);
+  const diesel = r2((+b.dieselL || 0) * (+b.dieselRate || 0));
+  const taxable = r2(sub + transport + diesel);
   let cgst = 0, sgst = 0, igst = 0;
   if (co.gst) {
     const cl = client(b.clientId);
@@ -626,7 +650,7 @@ function calc(b) {
   }
   const raw = r2(taxable + cgst + sgst + igst);
   const grand = Math.round(raw);
-  return {sub, transport, taxable, cgst, sgst, igst, roundOff: r2(grand - raw), grand};
+  return {sub, transport, diesel, taxable, cgst, sgst, igst, roundOff: r2(grand - raw), grand};
 }
 const received = b => r2((b.payments || []).reduce((s, p) => s + (+p.amount || 0) + (+p.tds || 0), 0));
 const balance = b => b.type === 'invoice' ? Math.max(0, r2(calc(b).grand - received(b))) : 0;
@@ -652,6 +676,56 @@ const salaryEq = (e, d) => eq([
   ...(d.allow ? ['+', {label: `Allowance · ${d.days} days × ${rs(e.allowance)}`, value: rs(d.allow)}] : []),
   '−', {label: 'Advance taken', value: rs(d.adv), tone: d.adv ? 'warn' : ''},
   '=', {label: 'To pay', value: rs(d.toPay), tone: 'good', sub: d.carry ? `${rs(d.carry)} advance goes to next month` : ''}]);
+
+// Work, earning and diesel for one vehicle in a period ('all' | 'fy' | 'month'), by work date / fill date.
+function vstats(vid, p = 'all') {
+  let work = 0, earned = 0;
+  invoices().forEach(b => b.lines.forEach(l => { if (l.vehicleId !== vid) return;
+    l.entries.forEach(e => { const q = parseQty(e.qty); if (q > 0 && inPeriod(e.date || b.date, p)) { work += q; earned += q * (+l.rate || 0); } }); }));
+  const fills = DB.diesel.filter(f => f.vehicleId === vid && inPeriod(f.date, p)).sort((a, b) => b.date.localeCompare(a.date));
+  const litres = r2(fills.reduce((s, f) => s + (+f.litres || 0), 0)), cost = r2(fills.reduce((s, f) => s + (+f.amount || 0), 0));
+  const v = vehicle(vid), avg = work ? r2(litres / work) : 0;
+  return {work: r2(work), earned: r2(earned), litres, cost, fills, avg, after: r2(earned - cost), high: !!(v && v.dieselNorm && work && avg > v.dieselNorm * 1.15)};
+}
+const perWord = v => v.unit === 'Hour' ? 'hr' : v.unit.toLowerCase();
+const avgText = (v, st) => st.work ? `${qtyFmt(st.avg)} L/${perWord(v)}` : '—';
+const avgChip = (v, st) => !st.work || !st.litres || !v.dieselNorm ? '' : st.high ? chip([`High · normal ${v.dieselNorm}`, 'bad']) : chip(['OK', 'good']);
+const periodName = p => p === 'month' ? monthName(THIS_MONTH) : p === 'fy' ? 'Year 20' + CUR_FY : 'All time';
+let vehPeriod = 'fy';
+const periodSeg = (act, cur) => `<div class="seg">${['month', 'fy', 'all'].map(p => `<button data-act="${act}" data-val="${p}" class="${cur === p ? 'on' : ''}">${periodName(p)}</button>`).join('')}</div>`;
+
+function dieselForm(pre) {
+  if (!DB.vehicles.length) { toast('Add a vehicle first'); return go('#vehicles'); }
+  const last = [...DB.diesel].sort((a, b) => b.date.localeCompare(a.date))[0];
+  openModal(`<h2>Diesel entry</h2><form id="dform" novalidate><div id="derr"></div>
+    <div class="form-grid">
+      <div class="field full"><label for="d_veh">Vehicle</label><select class="input" id="d_veh"><option value="">Choose vehicle…</option>
+        ${DB.vehicles.map(v => `<option value="${v.id}" ${pre && pre.id === v.id ? 'selected' : ''}>${esc(vehicleLabel(v))} · ${esc(v.type)}</option>`).join('')}</select></div>
+      <div class="field"><label for="d_l">Litres</label><input class="input big" id="d_l" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+      <div class="field"><label for="d_rate">Price per litre (₹)</label><input class="input" id="d_rate" type="number" inputmode="decimal" min="0" step="any" value="${last ? last.rate : 92}"></div>
+      <div class="field"><label for="d_date">Date</label><input class="input" id="d_date" type="date" value="${TODAY}">${dateChips('d_date')}</div>
+      <div class="field"><label for="d_meter">Meter reading (optional)</label><input class="input" id="d_meter" inputmode="decimal" placeholder="Hour meter or km"></div>
+      <div class="field full"><label for="d_where">Pump / place</label><input class="input" id="d_where" value="${esc(last?.where || '')}" placeholder="HP pump, Moshi"></div>
+      <div class="field full"><span class="field-label">Paid by</span>${radioSeg('d_mode', ['Cash', 'UPI', 'Pump credit'], last?.mode || 'Cash')}</div>
+    </div>
+    <div id="d_sum"></div>${modalFoot('Save diesel')}</form>`, true);
+  const upd = () => {
+    const l = +$('#d_l').value || 0, r = +$('#d_rate').value || 0;
+    $('#d_sum').innerHTML = eq([{label: 'Litres', value: qtyFmt(l) + ' L'}, '×', {label: 'Price per litre', value: rs(r)}, '=', {label: 'Diesel amount', value: rs(r2(l * r)), tone: 'warn'}]);
+  };
+  upd(); $('#dform').addEventListener('input', upd);
+  if (pre) $('#d_l').focus();
+  $('#dform').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const v = vehicle($('#d_veh').value), l = +$('#d_l').value || 0, r = +$('#d_rate').value || 0;
+    if (!v) return showErr('#derr', 'Choose the vehicle.');
+    if (!(l > 0)) return showErr('#derr', 'Enter litres.');
+    if (!(r > 0)) return showErr('#derr', 'Enter price per litre.');
+    if (!$('#d_date').value) return showErr('#derr', 'Choose the date.');
+    DB.diesel.push({id: uid(), vehicleId: v.id, date: $('#d_date').value, litres: l, rate: r, amount: r2(l * r), meter: $('#d_meter').value.trim(), where: $('#d_where').value.trim(), mode: radioVal('d_mode'), note: ''});
+    save(); closeModal(); toast(`${qtyFmt(l)} L diesel saved for ${vehicleLabel(v)}`); router();
+  });
+}
 
 /* ---------------- modal / forms ---------------- */
 function openModal(html, narrow) {
@@ -715,12 +789,13 @@ const routes = [
   [/^clients$/, renderClients],
   [/^client\/(\w+)$/, m => renderClient(m[1])],
   [/^vehicles$/, renderVehicles],
+  [/^diesel$/, renderDiesel],
   [/^vehicle\/(\w+)$/, m => renderVehicle(m[1])],
   [/^staff$/, renderStaff],
   [/^staff\/(\w+)$/, m => renderEmployee(m[1])],
   [/^settings$/, renderSettings],
 ];
-const NAV_OF = {'': 'home', bills: 'bills', bill: 'bills', clients: 'clients', client: 'clients', vehicles: 'vehicles', vehicle: 'vehicles', staff: 'staff', settings: 'settings', payments: 'bills', advances: 'staff', salaries: 'staff'};
+const NAV_OF = {'': 'home', bills: 'bills', bill: 'bills', clients: 'clients', client: 'clients', vehicles: 'vehicles', vehicle: 'vehicles', diesel: 'vehicles', staff: 'staff', settings: 'settings', payments: 'bills', advances: 'staff', salaries: 'staff'};
 let billFilter = {tab: 'all', company: 'all', period: 'all', q: ''};
 let payPeriod = 'fy';
 const PRESETS = {year: {tab: 'all', period: 'fy'}, month: {tab: 'all', period: 'month'}, pending: {tab: 'pending'}, quotes: {tab: 'quotation'}};
@@ -770,10 +845,8 @@ function renderHome() {
     const bs = invoices().filter(b => b.clientId === c.id && balance(b) > 0.5);
     return {c, n: bs.length, amt: bs.reduce((s, b) => s + balance(b), 0), days: Math.max(0, ...bs.map(b => daysBetween(b.date, TODAY)))};
   }).filter(x => x.n).sort((a, b) => b.days - a.days);
-  const vrows = DB.vehicles.map(v => {
-    let amt = 0; fyInv.forEach(b => b.lines.forEach(l => { if (l.vehicleId === v.id) amt += lineAmt(l); }));
-    return {v, amt};
-  }).sort((a, b) => b.amt - a.amt);
+  const dslM = DB.diesel.filter(f => inPeriod(f.date, 'month')).reduce((t, f) => ({cost: t.cost + (+f.amount || 0), litres: t.litres + (+f.litres || 0)}), {cost: 0, litres: 0});
+  const vrows = DB.vehicles.map(v => ({v, st: vstats(v.id, 'fy')})).sort((a, b) => b.st.after - a.st.after);
 
   const openQ = DB.bills.filter(b => b.type !== 'invoice' && billStatus(b)[0] === 'Open').sort((a, b) => b.date.localeCompare(a.date));
   const advList = DB.employees.filter(e => advanceDue(e) > 0).sort((a, b) => advanceDue(b) - advanceDue(a));
@@ -785,6 +858,7 @@ function renderHome() {
     <button class="btn" data-act="advance"><i>₹</i>Give advance</button>
     <button class="btn" data-act="salary"><i>₹</i>Pay salary</button>
     <a class="btn" href="#bill/new/quotation"><i>+</i>New quotation</a>
+    <button class="btn" data-act="diesel"><i>+</i>Add diesel</button>
   </div>
   <h2 class="sec">Money · year 20${CUR_FY}</h2>
   ${eq([
@@ -796,6 +870,7 @@ function renderHome() {
   <div class="tiles">
     <a class="tile go" href="#bills/month"><span>${monthName(THIS_MONTH)} billing</span><b>${rs(monthInv.reduce((s, b) => s + calc(b).grand, 0))}</b><small>${pl(monthInv.length, 'bill', 'bills')}</small></a>
     <a class="tile go" href="#vehicles"><span>Vehicles working</span><b>${onSite} of ${DB.vehicles.length}</b><small>${repair ? repair + ' in repair' : 'none in repair'}</small></a>
+    <a class="tile go" href="#diesel"><span>${monthName(THIS_MONTH)} diesel</span><b class="warn">${rs(dslM.cost)}</b><small>${qtyFmt(dslM.litres)} litres</small></a>
     <a class="tile go" href="#advances"><span>Advance with staff</span><b class="warn">${rs(advTotal)}</b><small>${pl(advPeople, 'person', 'people')}</small></a>
     <a class="tile go" href="#salaries/${PREV_MONTH}"><span>${monthName(PREV_MONTH)} salary paid</span><b>${rs(salaryPaid)}</b><small>${paidCount} of ${pl(DB.employees.length, 'person', 'people')}</small></a>
   </div>
@@ -808,10 +883,10 @@ function renderHome() {
       </tbody></table></div>` : `<div class="empty"><b>No pending payments</b></div>`}
     </section>
     <section class="panel">
-      <div class="panel-head"><h2>Vehicles · earned this year</h2><a class="btn small" href="#vehicles">All</a></div>
+      <div class="panel-head"><h2>Vehicles · this year</h2><a class="btn small" href="#vehicles">All</a></div>
       <div class="tbl-wrap"><table class="tbl"><tbody>
-      ${vrows.map(({v, amt}) => `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.site || v.type)}</span></td>
-        <td>${statusChip(v.status)}</td><td class="r"><b>${rs(amt)}</b></td></tr>`).join('')}
+      ${vrows.map(({v, st}) => `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.site || v.type)}</span></td>
+        <td>${statusChip(v.status)}${st.high ? `<span class="sub">${chip(['Diesel high', 'bad'])}</span>` : ''}</td><td class="r"><b class="${st.after >= 0 ? 't-good' : 't-bad'}">${rs(st.after)}</b><span class="sub">${rs(st.earned)} − diesel ${rs(st.cost)}</span></td></tr>`).join('')}
       </tbody></table></div>
     </section>
     <section class="panel">
@@ -980,6 +1055,8 @@ function drawEditor() {
         <div class="tot-box">
           <div><span>Total of work</span><b class="num" id="t-sub"></b></div>
           <div><label for="ed-tr">Transport</label>${inp('transport', d.transport, 'number', num + ' id="ed-tr" placeholder="0.00"')}</div>
+          <div><label for="ed-dl">Diesel</label><span class="dsl">${inp('dieselL', d.dieselL, 'number', num + ' id="ed-dl" placeholder="0" aria-label="Diesel litres"')} L × ₹${inp('dieselRate', d.dieselRate, 'number', num + ' placeholder="92" aria-label="Diesel price per litre"')}</span></div>
+          <div><span>Diesel amount</span><b class="num" id="t-dsl"></b></div>
           <div class="totals" id="t-rest"></div>
         </div>
       </div>
@@ -996,6 +1073,7 @@ function drawTotals() {
   const c = calc(draft), co = company(draft.companyId);
   const row = (l, v, cls = '') => `<div class="${cls}"><span>${l}</span><b class="num">${money(v)}</b></div>`;
   $('#t-sub').textContent = money(c.sub);
+  $('#t-dsl').textContent = money(c.diesel);
   $('#t-rest').innerHTML = row('Total amount', c.taxable)
     + (co.gst ? (c.igst ? row('Add IGST 18%', c.igst) : row('Add CGST 9%', c.cgst) + row('Add SGST 9%', c.sgst)) : `<div><span>GST</span><span class="chip">Not charged</span></div>`)
     + (c.roundOff ? row('Round off', c.roundOff) : '')
@@ -1085,11 +1163,12 @@ function docHTML(b) {
         <td class="r">${amt(l.rate)}<div class="muted">per ${l.unit.toLowerCase()}</div></td><td class="r b">${q ? amt(lineAmt(l)) : '—'}</td></tr>`;
       used++;
     });
+    if (c.diesel && rateOnly) { rows += `<tr><td class="c">${b.lines.length + (+b.transport ? 2 : 1)}</td><td class="desc2"><b>Diesel</b><div class="muted">${qtyFmt(+b.dieselL)} litres × ₹${amt(b.dieselRate)}</div></td>${co.gst ? '<td></td>' : ''}<td class="c">Litre</td><td class="r">${qtyFmt(+b.dieselL)} L</td><td class="r">${amt(b.dieselRate)}</td><td class="r b">${amt(c.diesel)}</td></tr>`; used++; }
     if (+b.transport && rateOnly) { rows += `<tr><td class="c">${b.lines.length + 1}</td><td class="desc2"><b>Transport</b><div class="muted">Shifting of machine to and from site</div></td>${co.gst ? '<td></td>' : ''}<td class="c">Lump sum</td><td class="r">—</td><td class="r">${amt(b.transport)}</td><td class="r b">${amt(b.transport)}</td></tr>`; used++; }
     rows += `<tr class="fill grow"><td></td><td></td>${co.gst ? '<td></td>' : ''}<td></td><td></td><td></td><td></td></tr>`;
   }
   const tr = (l, v) => `<tr><td class="lbl">${l}</td><td class="r">${v}</td></tr>`;
-  const tot = tr('Transport', money(c.transport)) + tr('Total Amount', money(c.taxable))
+  const tot = tr('Transport', money(c.transport)) + (c.diesel ? tr(`Diesel (${qtyFmt(+b.dieselL)} L × ₹${amt(b.dieselRate)})`, money(c.diesel)) : '') + tr('Total Amount', money(c.taxable))
     + (co.gst ? (c.igst ? tr('Add IGST &nbsp; 18 %', money(c.igst)) : tr('Add CGST &nbsp; 9 %', money(c.cgst)) + tr('Add SGST &nbsp; 9 %', money(c.sgst))) : '')
     + (c.roundOff ? tr('Round Off', money(c.roundOff)) : '')
     + `<tr class="g"><td class="lbl">Grand Total</td><td class="r">${money(c.grand)}</td></tr>`;
@@ -1255,13 +1334,14 @@ function vehicleForm(v) {
     {id: 'companyId', label: 'Bills under', type: 'select', options: DB.companies.map(c => [c.id, c.short]), value: v?.companyId || 'rke'},
     {id: 'unit', label: 'Charged per', type: 'select', options: ['Hour', 'Day', 'Trip', 'Brass', 'Month'], value: v?.unit || 'Hour'},
     {id: 'rate', label: 'Normal rate (₹)', type: 'number', value: v?.rate, required: true},
+    {id: 'dieselNorm', label: 'Normal diesel (litres per hour / day)', type: 'number', value: v?.dieselNorm, hint: 'Used to warn when diesel use is too high'},
     {id: 'attachment', label: 'Attachment', value: v?.attachment, placeholder: 'Bucket'},
     {id: 'operatorId', label: 'Operator / driver', type: 'select', options: [['', '— None —'], ...DB.employees.map(e => [e.id, e.name + ' (' + e.role + ')'])], value: v?.operatorId || ''},
     {id: 'status', label: 'Right now', type: 'select', options: ['On site', 'Idle', 'Under repair'], value: v?.status || 'Idle'},
     {id: 'site', label: 'Working at', value: v?.site, placeholder: 'Client – site'},
   ], onSubmit: x => {
     if (!(+x.rate > 0)) return 'Rate must be more than 0.';
-    const data = {...x, rate: +x.rate, regNo: x.regNo.toUpperCase(), site: x.status === 'On site' ? x.site : ''};
+    const data = {...x, rate: +x.rate, dieselNorm: +x.dieselNorm || 0, regNo: x.regNo.toUpperCase(), site: x.status === 'On site' ? x.site : ''};
     if (v) Object.assign(v, data); else DB.vehicles.push({id: uid(), ...data});
     save(); toast(`${vehicleLabel(data)} saved`); router();
   }});
@@ -1271,16 +1351,46 @@ function vehicleUse(vid) {
   invoices().forEach(b => b.lines.forEach(l => { if (l.vehicleId === vid) rows.push({b, qty: lineQty(l), amt: lineAmt(l)}); }));
   return rows;
 }
+const vehTabs = on => `<div class="seg"><a href="#vehicles" class="${on === 'veh' ? 'on' : ''}">Vehicles</a><a href="#diesel" class="${on === 'diesel' ? 'on' : ''}">Diesel</a></div>`;
 function renderVehicles() {
+  const rows = DB.vehicles.map(v => ({v, st: vstats(v.id, vehPeriod)}));
+  const T = k => r2(rows.reduce((s, x) => s + x.st[k], 0));
   main.innerHTML = `
   <div class="page-head"><div><h1>Vehicles</h1><p>${DB.vehicles.length} machines · ${DB.vehicles.filter(v => v.status === 'On site').length} working today</p></div>
-    <div class="actions"><button class="btn" data-act="csv-vehicles">Download for Excel</button><button class="btn primary" data-act="add-vehicle">+ Add vehicle</button></div></div>
-  <section class="panel">${DB.vehicles.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Vehicle</th><th>Rate</th><th>Right now</th><th>Operator</th><th class="r">Billed this year</th></tr></thead><tbody>
-  ${DB.vehicles.map(v => { const u = vehicleUse(v.id).filter(x => fyOf(x.b.date) === CUR_FY); const q = u.reduce((s, x) => s + x.qty, 0), a = u.reduce((s, x) => s + x.amt, 0);
-    return `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.type)} · ${esc(company(v.companyId)?.short)}</span></td>
-    <td>${rs(v.rate)} / ${v.unit.toLowerCase()}</td><td>${chip([v.status, v.status === 'On site' ? 'good' : v.status === 'Under repair' ? 'bad' : ''])}${v.site ? `<span class="sub">${esc(v.site)}</span>` : ''}</td>
-    <td>${esc(employee(v.operatorId)?.name || '—')}</td><td class="r"><b>${rs(a)}</b><span class="sub">${qtyFmt(q)} ${v.unit === 'Hour' ? 'hrs' : v.unit.toLowerCase() + 's'}</span></td></tr>`; }).join('')}
-  </tbody></table></div>` : `<div class="empty"><b>No vehicles yet</b>Add your first machine.</div>`}</section>`;
+    <div class="actions"><button class="btn" data-act="csv-vehicles">Download for Excel</button><button class="btn" data-act="diesel">+ Diesel</button><button class="btn primary" data-act="add-vehicle">+ Add vehicle</button></div></div>
+  <div class="toolbar">${vehTabs('veh')}${periodSeg('veh-period', vehPeriod)}</div>
+  ${eq([{label: 'Earned', value: rs(T('earned')), tone: 'good', sub: 'work done'}, '−', {label: 'Diesel', value: rs(T('cost')), tone: 'warn', sub: `${qtyFmt(T('litres'))} litres`, href: '#diesel'}, '=', {label: 'Left after diesel', value: rs(T('after')), tone: T('after') >= 0 ? 'good' : 'bad'}])}
+  <section class="panel">${DB.vehicles.length ? `<div class="tbl-wrap"><table class="tbl lab"><thead><tr><th>Vehicle</th><th>Right now</th><th class="r">Work</th><th class="r">Earned</th><th class="r">Diesel</th><th class="r">Average</th><th class="r">After diesel</th></tr></thead><tbody>
+  ${rows.map(({v, st}) => `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.type)} · ${rs(v.rate)}/${perWord(v)} · ${esc(employee(v.operatorId)?.name || 'no operator')}</span></td>
+    <td data-l="Now">${statusChip(v.status)}${v.site ? `<span class="sub">${esc(v.site)}</span>` : ''}</td>
+    <td data-l="Work" class="r">${st.work ? qtyFmt(st.work) + ' ' + unitWord(v.unit) : '—'}</td>
+    <td data-l="Earned" class="r"><b>${rs(st.earned)}</b></td>
+    <td data-l="Diesel" class="r">${st.cost ? `<b class="t-warn">− ${rs(st.cost)}</b><span class="sub">${qtyFmt(st.litres)} L</span>` : '—'}</td>
+    <td data-l="Average" class="r">${avgText(v, st)}<span class="sub">${avgChip(v, st)}</span></td>
+    <td data-l="After diesel" class="r"><b class="${st.after >= 0 ? 't-good' : 't-bad'}">${rs(st.after)}</b></td></tr>`).join('')}
+  </tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${rs(T('earned'))}</td><td class="r">− ${rs(T('cost'))}</td><td></td><td class="r">${rs(T('after'))}</td></tr></tfoot></table></div>` : `<div class="empty"><b>No vehicles yet</b>Add your first machine.</div>`}</section>`;
+}
+function renderDiesel() {
+  const fills = DB.diesel.filter(f => inPeriod(f.date, vehPeriod)).sort((a, b) => b.date.localeCompare(a.date));
+  const litres = r2(fills.reduce((s, f) => s + (+f.litres || 0), 0)), cost = r2(fills.reduce((s, f) => s + (+f.amount || 0), 0));
+  const per = DB.vehicles.map(v => ({v, st: vstats(v.id, vehPeriod)})).filter(x => x.st.litres || x.st.work).sort((a, b) => b.st.cost - a.st.cost);
+  const credit = r2(fills.filter(f => f.mode === 'Pump credit').reduce((s, f) => s + (+f.amount || 0), 0));
+  main.innerHTML = `
+  <div class="page-head"><div><h1>Diesel</h1></div>
+    <div class="actions"><button class="btn" data-act="csv-diesel">Download for Excel</button><button class="btn primary" data-act="diesel">+ Diesel entry</button></div></div>
+  <div class="toolbar">${vehTabs('diesel')}${periodSeg('veh-period', vehPeriod)}</div>
+  ${eq([{label: 'Diesel filled', value: qtyFmt(litres) + ' L', sub: pl(fills.length, 'fill', 'fills')}, '×', {label: 'Average price', value: litres ? rs(r2(cost / litres)) : '—', sub: 'per litre'}, '=', {label: 'Diesel cost', value: rs(cost), tone: 'warn', sub: credit ? `${rs(credit)} on pump credit` : ''}])}
+  <section class="panel"><div class="panel-head"><h2>By vehicle</h2></div>
+  ${per.length ? `<div class="tbl-wrap"><table class="tbl lab"><thead><tr><th>Vehicle</th><th class="r">Litres</th><th class="r">Diesel ₹</th><th class="r">Work</th><th class="r">Average</th><th class="r">Diesel ₹ per ${'hr / day'}</th></tr></thead><tbody>
+  ${per.map(({v, st}) => `<tr class="click" data-href="#vehicle/${v.id}"><td><b>${esc(vehicleLabel(v))}</b><span class="sub">${esc(v.type)}</span></td><td data-l="Litres" class="r">${qtyFmt(st.litres)} L</td><td data-l="Diesel ₹" class="r"><b class="t-warn">${rs(st.cost)}</b></td>
+    <td data-l="Work" class="r">${st.work ? qtyFmt(st.work) + ' ' + unitWord(v.unit) : '—'}</td><td data-l="Average" class="r"><b>${avgText(v, st)}</b><span class="sub">${avgChip(v, st)}</span></td><td data-l="Per hr / day" class="r">${st.work ? rs(r2(st.cost / st.work)) + '/' + perWord(v) : '—'}</td></tr>`).join('')}
+  </tbody></table></div>` : `<div class="empty"><b>No diesel in ${periodName(vehPeriod).toLowerCase()}</b></div>`}</section>
+  <section class="panel" style="margin-top:20px"><div class="panel-head"><h2>All fills</h2></div>
+  ${fills.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Vehicle</th><th class="r">Litres × price</th><th class="r">Amount</th><th>Pump · paid by</th><th></th></tr></thead><tbody>
+  ${fills.map(f => { const v = vehicle(f.vehicleId); return `<tr><td><b>${dmy(f.date)}</b></td><td>${v ? `<a href="#vehicle/${v.id}">${esc(vehicleLabel(v))}</a>` : '—'}${f.meter ? `<span class="sub">meter ${esc(f.meter)}</span>` : ''}</td>
+    <td class="r">${qtyFmt(f.litres)} L × ${rs(f.rate)}</td><td class="r"><b class="t-warn">${rs(f.amount)}</b></td><td>${esc(f.where || '—')}<span class="sub">${esc(f.mode || '')}</span></td>
+    <td class="r"><button class="btn small ghost" title="Remove" data-act="del-diesel" data-id="${f.id}">✕</button></td></tr>`; }).join('')}
+  </tbody><tfoot><tr><td colspan="2">Total</td><td class="r">${qtyFmt(litres)} L</td><td class="r">${rs(cost)}</td><td colspan="2"></td></tr></tfoot></table></div>` : `<div class="empty"><b>No diesel entries</b></div>`}</section>`;
 }
 function renderVehicle(id) {
   const v = vehicle(id); if (!v) return notFound();
@@ -1291,7 +1401,8 @@ function renderVehicle(id) {
     .sort((x, y) => (y.e.date || y.b.date).localeCompare(x.e.date || x.b.date));
   const op = employee(v.operatorId);
   const view = pageView['v' + id] || 'bills';
-  const title = {bills: 'Bills with this vehicle', days: 'Work, day by day', avg: 'Earning per ' + v.unit.toLowerCase() + ', bill by bill'}[view];
+  const st = vstats(id, 'all');
+  const title = {bills: 'Bills with this vehicle', days: 'Work, day by day', avg: 'Earning per ' + v.unit.toLowerCase() + ', bill by bill', diesel: 'Diesel fills'}[view];
   let body;
   if (view === 'days') body = days.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Challan</th><th>Client</th><th class="r">${v.unit === 'Hour' ? 'Hours' : v.unit + 's'}</th></tr></thead><tbody>
     ${days.map(({e, b}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${dmy(e.date) || '—'}</b></td><td>${esc(e.challan || '—')}</td><td>${esc(client(b.clientId)?.name)}<span class="sub">bill ${esc(b.number)}</span></td><td class="r"><b>${qtyFmt(parseQty(e.qty))}</b></td></tr>`).join('')}
@@ -1299,15 +1410,25 @@ function renderVehicle(id) {
   else if (view === 'avg') body = use.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Bill</th><th class="r">Earned</th><th class="r">Work</th><th class="r">Per ${v.unit.toLowerCase()}</th></tr></thead><tbody>
     ${use.map(({b, qty, amt}) => `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(b.number)}</b><span class="sub">${esc(client(b.clientId)?.name)}</span></td><td class="r">${rs(amt)}</td><td class="r">÷ ${qtyFmt(qty)} ${u}</td><td class="r"><b>${qty ? rs(amt / qty) : '—'}</b></td></tr>`).join('')}
     </tbody><tfoot><tr><td>Total</td><td class="r">${rs(a)}</td><td class="r">÷ ${qtyFmt(q)} ${u}</td><td class="r">${q ? rs(a / q) : '—'}</td></tr></tfoot></table></div>` : `<div class="empty"><b>Not billed yet</b></div>`;
+  else if (view === 'diesel') body = st.fills.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th class="r">Litres × price</th><th class="r">Amount</th><th>Pump · paid by</th><th></th></tr></thead><tbody>
+    ${st.fills.map(f => `<tr><td><b>${dmy(f.date)}</b>${f.meter ? `<span class="sub">meter ${esc(f.meter)}</span>` : ''}</td><td class="r">${qtyFmt(f.litres)} L × ${rs(f.rate)}</td><td class="r"><b class="t-warn">${rs(f.amount)}</b></td><td>${esc(f.where || '—')}<span class="sub">${esc(f.mode || '')}</span></td><td class="r"><button class="btn small ghost" title="Remove" data-act="del-diesel" data-id="${f.id}">✕</button></td></tr>`).join('')}
+    </tbody><tfoot><tr><td>Total</td><td class="r">${qtyFmt(st.litres)} L</td><td class="r">${rs(st.cost)}</td><td colspan="2"></td></tr></tfoot></table></div>` : `<div class="empty"><b>No diesel entered</b><button class="linkbtn" data-act="diesel-one" data-id="${v.id}">Add diesel</button></div>`;
   else body = use.length ? `<div class="tbl-wrap"><table class="tbl"><tbody>${use.map(({b, qty, amt}) => { const cl = client(b.clientId); return `<tr class="click" data-href="#bill/${b.id}"><td><b>${esc(cl?.name)}</b><span class="sub">${esc(b.number)} · ${dmy(b.date)}</span></td><td class="r">${qtyFmt(qty)} ${u}</td><td class="r"><b>${rs(amt)}</b></td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty"><b>Not billed yet</b></div>`;
   main.innerHTML = `
   <a class="crumb" href="#vehicles">← All vehicles</a>
   <div class="page-head"><div><h1>${esc(vehicleLabel(v))}</h1><p>${esc(v.type)} · ${rs(v.rate)} per ${v.unit.toLowerCase()} · ${esc(company(v.companyId)?.short)} &nbsp;${statusChip(v.status)}</p></div>
-    <div class="actions"><button class="btn" data-act="edit-vehicle" data-id="${v.id}">Edit</button><button class="btn danger" data-act="del-vehicle" data-id="${v.id}">Delete</button></div></div>
+    <div class="actions"><button class="btn" data-act="edit-vehicle" data-id="${v.id}">Edit</button><button class="btn danger" data-act="del-vehicle" data-id="${v.id}">Delete</button><button class="btn primary" data-act="diesel-one" data-id="${v.id}">+ Diesel</button></div></div>
   ${eq([
-    {label: 'Earned', value: rs(a), tone: 'good', sub: `${pl(use.length, 'bill', 'bills')}`, act: 'view', val: 'bills', on: view === 'bills'}, '÷',
+    {label: 'Earned', value: rs(a), tone: 'good', sub: `${pl(use.length, 'bill', 'bills')}`, act: 'view', val: 'bills', on: view === 'bills'}, '−',
+    {label: 'Diesel', value: rs(st.cost), tone: 'warn', sub: `${qtyFmt(st.litres)} litres`, act: 'view', val: 'diesel', on: view === 'diesel'}, '=',
+    {label: 'Left after diesel', value: rs(r2(a - st.cost)), tone: a - st.cost >= 0 ? 'good' : 'bad'},
+  ], 'v' + id)}
+  <div style="height:12px"></div>
+  ${eq([
+    {label: 'Diesel', value: `${qtyFmt(st.litres)} L`, act: 'view', val: 'diesel', on: false}, '÷',
     {label: 'Work done', value: `${qtyFmt(q)} ${u}`, sub: `${pl(days.length, 'entry', 'entries')}`, act: 'view', val: 'days', on: view === 'days'}, '=',
-    {label: 'Earned per ' + v.unit.toLowerCase(), value: q ? rs(a / q) : '—', sub: `normal rate ${rs(v.rate)}`, act: 'view', val: 'avg', on: view === 'avg'},
+    {label: 'Average', value: q ? `${qtyFmt(r2(st.litres / q))} L/${perWord(v)}` : '—', tone: st.high ? 'bad' : '', sub: v.dieselNorm ? `normal ${v.dieselNorm} L/${perWord(v)}${st.high ? ' · too high, check' : ''}` : '', act: 'view', val: 'diesel', on: false},
+    '|', {label: 'Earned per ' + v.unit.toLowerCase(), value: q ? rs(a / q) : '—', sub: `normal rate ${rs(v.rate)}`, act: 'view', val: 'avg', on: view === 'avg'},
   ], 'v' + id)}
   <div class="grid-side">
     <section class="panel"><div class="panel-head"><h2>${title}</h2></div>${body}</section>
@@ -1535,12 +1656,12 @@ function renderStaff() {
   <div class="page-head"><div><h1>Employees</h1><p>${pl(DB.employees.length, 'person', 'people')} · monthly salary bill ${rs(totalSal)}</p></div>
     <div class="actions"><button class="btn" data-act="csv-staff">Download for Excel</button><button class="btn" data-act="advance">Give advance</button><button class="btn" data-act="salary">Pay salary</button><button class="btn primary" data-act="add-emp">+ Add employee</button></div></div>
   ${staffTabs('people')}
-  <section class="panel">${DB.employees.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Vehicle</th><th class="r">Salary + allowance</th><th class="r">Advance taken</th><th class="r">To pay</th><th>Last paid</th></tr></thead><tbody>
+  <section class="panel">${DB.employees.length ? `<div class="tbl-wrap"><table class="tbl lab"><thead><tr><th>Name</th><th>Vehicle</th><th class="r">Salary + allowance</th><th class="r">Advance taken</th><th class="r">To pay</th><th>Last paid</th></tr></thead><tbody>
   ${DB.employees.map(e => { const last = [...e.salaries].sort((a, b) => b.month.localeCompare(a.month))[0]; const d = salaryDue(e);
     return `<tr class="click" data-href="#staff/${e.id}"><td><b>${esc(e.name)}</b><span class="sub">${esc(e.role)}${e.phone ? ' · ' + esc(e.phone) : ''}</span></td>
-    <td>${esc(vehicleLabel(vehicle(e.vehicleId)) || '—')}</td><td class="r">${rs(d.total)}<span class="sub">${rs(e.salary)}${d.allow ? ' + ' + rs(d.allow) + ' allowance' : ''}</span></td>
-    <td class="r">${d.adv ? `<b class="t-warn">− ${rs(d.adv)}</b>` : '—'}</td><td class="r"><b class="t-good">${rs(d.toPay)}</b><span class="sub">${monthName(d.m)}</span></td>
-    <td>${last ? `${monthName(last.month)} <span class="sub">${rs(last.net)} on ${dmy(last.paidOn)}</span>` : chip(['Not paid yet', 'warn'])}</td></tr>`; }).join('')}
+    <td data-l="Vehicle">${esc(vehicleLabel(vehicle(e.vehicleId)) || '—')}</td><td data-l="Salary + allowance" class="r">${rs(d.total)}<span class="sub">${rs(e.salary)}${d.allow ? ' + ' + rs(d.allow) + ' allowance' : ''}</span></td>
+    <td data-l="Advance taken" class="r">${d.adv ? `<b class="t-warn">− ${rs(d.adv)}</b>` : '—'}</td><td data-l="To pay" class="r"><b class="t-good">${rs(d.toPay)}</b><span class="sub">${monthName(d.m)}</span></td>
+    <td data-l="Last paid">${last ? `${monthName(last.month)} <span class="sub">${rs(last.net)} on ${dmy(last.paidOn)}</span>` : chip(['Not paid yet', 'warn'])}</td></tr>`; }).join('')}
   </tbody></table></div>` : `<div class="empty"><b>No employees yet</b>Add operators, drivers and helpers.</div>`}</section>`;
 }
 function renderEmployee(id) {
@@ -1659,8 +1780,8 @@ document.addEventListener('click', e => {
     case 'pay-period': payPeriod = btn.dataset.val; renderPayments(); break;
     case 'csv-payments': downloadCSV(`payments-${TODAY}.csv`, [['Date', 'Client', 'Bill', 'Paid by', 'Reference', 'Amount', 'TDS', 'Total'],
       ...paymentsIn(payPeriod).map(({p, b}) => [dmy(p.date), client(b.clientId)?.name, b.number, p.mode, p.ref, p.amount, +p.tds || 0, (+p.amount || 0) + (+p.tds || 0)])]); break;
-    case 'csv-bills': downloadCSV(`bills-${TODAY}.csv`, [['Type', 'Number', 'Date', 'Company', 'Client', 'Site', 'Work', 'Transport', 'Taxable', 'GST', 'Grand Total', 'Received', 'Pending', 'Status'],
-      ...DB.bills.map(b => { const c = calc(b), cl = client(b.clientId); return [typeLabel(b), b.number, dmy(b.date), company(b.companyId).short, cl?.name, siteOf(cl, b.siteId)?.name, c.sub, c.transport, c.taxable, r2(c.cgst + c.sgst + c.igst), c.grand, b.type === 'invoice' ? received(b) : '', b.type === 'invoice' ? balance(b) : '', billStatus(b)[0]]; })]); break;
+    case 'csv-bills': downloadCSV(`bills-${TODAY}.csv`, [['Type', 'Number', 'Date', 'Company', 'Client', 'Site', 'Work', 'Transport', 'Diesel', 'Taxable', 'GST', 'Grand Total', 'Received', 'Pending', 'Status'],
+      ...DB.bills.map(b => { const c = calc(b), cl = client(b.clientId); return [typeLabel(b), b.number, dmy(b.date), company(b.companyId).short, cl?.name, siteOf(cl, b.siteId)?.name, c.sub, c.transport, c.diesel, c.taxable, r2(c.cgst + c.sgst + c.igst), c.grand, b.type === 'invoice' ? received(b) : '', b.type === 'invoice' ? balance(b) : '', billStatus(b)[0]]; })]); break;
     // clients
     case 'add-client': clientForm(null); break;
     case 'edit-client': clientForm(client(id)); break;
@@ -1672,12 +1793,18 @@ document.addEventListener('click', e => {
       c.sites = c.sites.filter(x => x.id !== s); save(); toast('Site removed'); renderClient(id); break; }
     // vehicles
     case 'add-vehicle': vehicleForm(null); break;
+    case 'diesel': dieselForm(null); break;
+    case 'diesel-one': dieselForm(vehicle(id)); break;
+    case 'veh-period': vehPeriod = btn.dataset.val; router(); break;
+    case 'del-diesel': confirmBox('Remove this diesel entry?', 'Use this only if it was entered by mistake.', 'Remove', () => { DB.diesel = DB.diesel.filter(f => f.id !== id); save(); router(); }); break;
+    case 'csv-diesel': downloadCSV(`diesel-${TODAY}.csv`, [['Date', 'Vehicle', 'Litres', 'Price per litre', 'Amount', 'Meter', 'Pump / place', 'Paid by'],
+      ...DB.diesel.filter(f => inPeriod(f.date, vehPeriod)).sort((a, b) => a.date.localeCompare(b.date)).map(f => [dmy(f.date), vehicleLabel(vehicle(f.vehicleId)), f.litres, f.rate, f.amount, f.meter, f.where, f.mode])]); break;
     case 'edit-vehicle': vehicleForm(vehicle(id)); break;
     case 'del-vehicle': { const v = vehicle(id), n = vehicleUse(id).length;
       if (n) { toast(`${vehicleLabel(v)} is on ${pl(n, 'bill', 'bills')}, so it can't be deleted. Mark it Idle instead.`); break; }
       confirmBox(`Delete ${vehicleLabel(v)}?`, 'The vehicle will be removed from the list.', 'Delete vehicle', () => { DB.vehicles = DB.vehicles.filter(x => x.id !== id); DB.employees.forEach(e => { if (e.vehicleId === id) e.vehicleId = ''; }); save(); toast('Vehicle deleted'); go('#vehicles'); }); break; }
-    case 'csv-vehicles': downloadCSV(`vehicles-${TODAY}.csv`, [['Vehicle', 'Number', 'Type', 'Company', 'Charged per', 'Rate', 'Status', 'Site', 'Operator', 'Work billed', 'Amount billed'],
-      ...DB.vehicles.map(v => { const u = vehicleUse(v.id); return [v.name, v.regNo, v.type, company(v.companyId)?.short, v.unit, v.rate, v.status, v.site, employee(v.operatorId)?.name, r2(u.reduce((s, x) => s + x.qty, 0)), r2(u.reduce((s, x) => s + x.amt, 0))]; })]); break;
+    case 'csv-vehicles': downloadCSV(`vehicles-${TODAY}.csv`, [['Vehicle', 'Number', 'Type', 'Company', 'Charged per', 'Rate', 'Status', 'Site', 'Operator', 'Work billed', 'Amount billed', 'Diesel litres', 'Diesel ₹', 'Average L per hr/day', 'Left after diesel'],
+      ...DB.vehicles.map(v => { const u = vehicleUse(v.id); return [v.name, v.regNo, v.type, company(v.companyId)?.short, v.unit, v.rate, v.status, v.site, employee(v.operatorId)?.name, r2(u.reduce((s, x) => s + x.qty, 0)), r2(u.reduce((s, x) => s + x.amt, 0)), (st => [st.litres, st.cost, st.avg, st.after])(vstats(v.id, 'all'))].flat(); })]); break;
     // staff
     case 'add-emp': employeeForm(null); break;
     case 'edit-emp': employeeForm(employee(id)); break;

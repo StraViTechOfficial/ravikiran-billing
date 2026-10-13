@@ -11,7 +11,8 @@ Every push to `main` redeploys. `npm run build` (`build.cjs`) writes `public/ind
 ## What's in the MVP
 - **Home** — billed / received / to-collect, vehicles working, advance pending with staff.
 - **Bills** — Quotation → Proforma Invoice → Tax Invoice, per-day challan rows (date, challan no, hours/days), transport, auto CGST/SGST (or IGST for other-state clients), no GST for T and L. Print / Save as PDF in their existing bill layout. Payments against each bill, including TDS.
-- **Clients & Sites**, **Vehicles** (rate per hour/day, status, operator, earnings), **Employees** (salary, daily bhatta, advances, salary payment with advance cut).
+- **Clients & Sites**, **Vehicles** (rate per hour/day, status, operator; earned − diesel = left after diesel; diesel average L/hr or L/day with a warning above the vehicle's normal), **Diesel** log (litres × price, pump, paid by), **Employees** (salary + daily allowance − advance taken = to pay).
+- Bills can carry a **diesel charge** (litres × price) before GST, next to transport.
 - **Download for Excel** (CSV) on bills, vehicles and employees.
 
-Not in the MVP yet: daily logs, diesel, expenses/maintenance, per-machine profit, logins.
+Not in the MVP yet: daily logs, repairs/maintenance, logins, shared data across devices.
