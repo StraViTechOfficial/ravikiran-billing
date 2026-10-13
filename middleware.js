@@ -36,12 +36,12 @@ function log(request, label, event) {
   }));
 }
 
-function locked(title, text, status) {
+function locked(title, text, status, loaded = -1) {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Private preview</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f2ee;color:#1d1d1b;font:16px/1.5 system-ui,sans-serif;padding:16px;box-sizing:border-box}
 .c{max-width:420px;background:#fff;border:1px solid #e2ded6;border-radius:14px;padding:28px}h1{font-size:1.25rem;margin:0 0 8px}p{margin:0 0 6px;color:#555}b{color:#1d1d1b}</style></head>
 <body><div class="c"><h1>${title}</h1><p>${text}</p><p>Built by <b>Stravitech</b>.</p></div></body></html>`;
-  return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+  return new Response(html, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'x-keys-loaded': String(loaded) } });
 }
 
 export default function middleware(request) {
@@ -56,7 +56,7 @@ export default function middleware(request) {
 
   if (given) {
     const label = valid.get(given);
-    if (!label) return locked('This link is not valid', 'Please ask Stravitech for a new link.', 403);
+    if (!label) return locked('This link is not valid', 'Please ask Stravitech for a new link.', 403, valid.size);
     log(request, label, 'link-opened');
     url.searchParams.delete('k');
     return new Response(null, {
@@ -70,7 +70,7 @@ export default function middleware(request) {
   }
 
   const label = valid.get(cookie(request, COOKIE));
-  if (!label) return locked('Private preview', 'This page is a private preview. Please open it using the link you were sent.', 401);
+  if (!label) return locked('Private preview', 'This page is a private preview. Please open it using the link you were sent.', 401, valid.size);
   if (url.pathname === '/' || url.pathname === '/index.html') log(request, label, 'visit');
   return next({ headers: { 'cache-control': 'private, no-store' } });
 }
