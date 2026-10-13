@@ -1,3 +1,5 @@
 .vercel
 .DS_Store
 *.bak*.html
+node_modules
+public

@@ -5,9 +5,14 @@ Front-end-only prototype of an operations app for Ravi Kiran Enterprises (and si
 ## Run
 Open `index.html` in Chrome/Edge (double-click). No server, no build, no env vars.
 
-## Deploy
-Hosted on Vercel as a static site (no build step, framework preset: Other). Every push to `main` redeploys. `vercel.json` sets `noindex` so search engines don't list it.
-Data is saved in the browser's localStorage; Settings → *Download backup* exports it as JSON.
+## Deploy (Vercel)
+Every push to `main` redeploys. `npm run build` (`build.cjs`) writes `public/index.html`: minified script, a "Prototype · Stravitech" watermark on bills, and a lock so a saved copy only runs on ravikiran.stravitech.com.
+
+`middleware.js` makes it a private link. Set these in Vercel → Settings → Environment Variables, then redeploy:
+- `ACCESS_KEYS`: `label:key` pairs, comma separated, e.g. `ravi:k7f3x9q2,me:p4m8w1z6`
+- `PREVIEW_UNTIL` (optional): `YYYY-MM-DD`; after this date the link shows "preview has ended"
+
+Share `https://ravikiran.stravitech.com/?k=<key>`. Without a valid key the page shows "Private preview". Remove a key to cut that person off. Each visit is logged (label, city, device) in Vercel → Logs.
 
 ## What's in the MVP
 - **Home** — billed / received / to-collect, vehicles working, advance pending with staff.
